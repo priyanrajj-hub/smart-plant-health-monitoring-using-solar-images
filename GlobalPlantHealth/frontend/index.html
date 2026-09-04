@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Canopy — Global Vegetation Health Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.32.1/dist/globe.gl.min.js"></script>
+    <style>
+        :root {
+            --soil-950: #1a1410;
+            --soil-900: #241b14;
+            --leaf-300: #8fb96a;
+            --stress-500: #b9542f;
+            --crit-500: #8f2d2d;
+            --paper: #f2ecdf;
+            --mono: "IBM Plex Mono", "Courier New", monospace;
+            --sans: "Inter", -apple-system, "Segoe UI", sans-serif;
+            --serif: "Source Serif Pro", Georgia, serif;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--soil-950);
+            color: var(--paper);
+            font-family: var(--sans);
+            overflow: hidden;
+        }
+
+        #fatal-error-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: red;
+            color: white;
+            padding: 20px;
+            font-weight: bold;
+            border-radius: 10px;
+            z-index: 99999;
+            display: none;
+            max-width: 80%;
+            text-align: center;
+        }
+
+        #globeViz {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 28px 36px;
+            pointer-events: none;
+            background: linear-gradient(to bottom, rgba(26, 20, 16, 0.9), transparent);
+        }
+
+        .brand {
+            font-family: var(--serif);
+            font-size: 22px;
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .brand .mark {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--leaf-300);
+            display: inline-block;
+            box-shadow: 0 0 10px var(--leaf-300);
+        }
+
+        .legend {
+            position: fixed;
+            bottom: 28px;
+            left: 36px;
+            z-index: 10;
+            font-family: var(--mono);
+            font-size: 11px;
+            display: flex;
+            gap: 22px;
+            pointer-events: none;
+        }
+
+        .legend .item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #c9bfa8;
+        }
+
+        .legend .swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .hint {
+            position: fixed;
+            bottom: 28px;
+            right: 36px;
+            z-index: 10;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: #8a7a63;
+            max-width: 220px;
+            text-align: right;
+            line-height: 1.6;
+            pointer-events: none;
+        }
+
+        #panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 20;
+            width: 420px;
+            max-width: 88vw;
+            background: linear-gradient(180deg, var(--soil-900), var(--soil-950));
+            border-left: 1px solid #4a3a28;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            padding: 32px 30px 40px;
+        }
+
+        #panel.open {
+            transform: translateX(0);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 26px;
+            right: 26px;
+            background: none;
+            border: none;
+            color: #8a7a63;
+            font-family: var(--mono);
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .panel-title {
+            font-family: var(--serif);
+            font-size: 30px;
+            line-height: 1.15;
+            margin-bottom: 4px;
+            margin-top: 20px;
+        }
+
+        .health-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            border-radius: 3px;
+            font-family: var(--mono);
+            font-size: 12px;
+            margin-bottom: 26px;
+        }
+
+        .health-badge .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+
+        .healthy {
+            background: rgba(92, 138, 63, 0.18);
+            color: var(--leaf-300);
+        }
+
+        .healthy .dot {
+            background: var(--leaf-300);
+        }
+
+        .stressed {
+            background: rgba(185, 84, 47, 0.16);
+            color: #e0966f;
+        }
+
+        .stressed .dot {
+            background: var(--stress-500);
+        }
+
+        .critical {
+            background: rgba(143, 45, 45, 0.2);
+            color: #e08080;
+        }
+
+        .critical .dot {
+            background: var(--crit-500);
+        }
+
+        .loading {
+            background: rgba(200, 200, 200, 0.1);
+            color: #fff;
+        }
+
+        .loading .dot {
+            background: #ccc;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 14px 0;
+            border-bottom: 1px solid #3a2c1e;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #9a8b72;
+        }
+
+        .metric-value {
+            font-family: var(--mono);
+            font-size: 15px;
+        }
+
+        .msg-error {
+            color: #ff6b6b;
+            font-size: 13px;
+            margin-top: 15px;
+            font-family: var(--mono);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="fatal-error-overlay">A JavaScript Error Occurred. Please screenshot this and show Antigravity!<br><br><span
+            id="error-text"></span></div>
+    <div id="globeViz"></div>
+
+    <header>
+        <div class="brand"><span class="mark"></span>Canopy<small>LIVE GEMINI ANALYTICS</small></div>
+    </header>
+    <div class="legend">
+        <div class="item"><span class="swatch" style="background:var(--leaf-300)"></span>Healthy (NDVI > 0.6)</div>
+        <div class="item"><span class="swatch" style="background:var(--stress-500)"></span>Stressed (NDVI 0.3-0.6)</div>
+        <div class="item"><span class="swatch" style="background:var(--crit-500)"></span>Critical (NDVI < 0.3)</div>
+        </div>
+        <div class="hint">Live Earth Texture LOADED.<br />Click anywhere on land to query Gemini AI.</div>
+        <div id="panel">
+            <button class="close-btn" id="closePanel"
+                onclick="document.getElementById('panel').classList.remove('open')">CLOSE ✕</button>
+            <div class="panel-title" id="p-region-name">Satellite Inspection</div>
+            <p style="font-family:var(--mono); font-size:11px; color:#8a7a63; margin-bottom: 20px" id="p-coords">Lat:
+                --, Lng: --</p>
+            <div class="health-badge loading" id="p-badge"><span class="dot"></span><span id="p-badge-text">Awaiting
+                    Coordinate</span></div>
+            <div class="metric-row"><span class="metric-label">NDVI (Calculated Proxy)</span><span class="metric-value"
+                    id="p-ndvi">—</span></div>
+            <div class="metric-row"><span class="metric-label">Data Source</span><span class="metric-value"
+                    id="p-source">—</span></div>
+            <div id="p-error" class="msg-error"></div>
+        </div>
+
+        <script>
+            window.addEventListener('error', function (e) {
+                document.getElementById('fatal-error-overlay').style.display = 'block';
+                document.getElementById('error-text').innerText = e.message;
+            });
+
+            document.addEventListener("DOMContentLoaded", () => {
+                try {
+                    const globe = Globe()(document.getElementById('globeViz'))
+                        .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg')
+                        .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png')
+                        .backgroundImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png')
+                        .pointOfView({ lat: 20, lng: 0, altitude: 2.5 });
+
+                    window.addEventListener('resize', () => { globe.width(window.innerWidth).height(window.innerHeight); });
+
+                    globe.onGlobeClick(async ({ lat, lng }) => {
+                        document.getElementById('p-coords').textContent = `Lat: ${lat.toFixed(4)}°, Lng: ${lng.toFixed(4)}°`;
+                        document.getElementById('p-region-name').textContent = "Querying Gemini AI...";
+                        const badge = document.getElementById('p-badge');
+                        badge.className = 'health-badge loading';
+                        document.getElementById('p-badge-text').textContent = "Fetching (Generative)...";
+                        document.getElementById('p-ndvi').textContent = "—";
+                        document.getElementById('p-source').textContent = "—";
+                        document.getElementById('p-error').textContent = "";
+                        document.getElementById('panel').classList.add('open');
+
+                        try {
+                            const res = await fetch(`http://localhost:8001/api/inspect?lat=${lat}&lng=${lng}`);
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.detail || "Unknown Backend Error");
+                            document.getElementById('p-region-name').textContent = "Region Analysis";
+                            document.getElementById('p-ndvi').textContent = data.ndvi_mean.toFixed(3);
+                            document.getElementById('p-source').textContent = data.source;
+                            badge.className = 'health-badge ' + data.status;
+                            document.getElementById('p-badge-text').textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+                        } catch (err) {
+                            document.getElementById('p-region-name').textContent = "Orbit Failed";
+                            document.getElementById('p-badge-text').textContent = "Connection Refused";
+                            document.getElementById('p-error').textContent = "API Proxy Error: " + err.message;
+                        }
+                        globe.pointOfView({ lat, lng, altitude: 1.5 }, 1000);
+                    });
+                } catch (e) {
+                    document.getElementById('fatal-error-overlay').style.display = 'block';
+                    document.getElementById('error-text').innerText = e.toString();
+                }
+            });
+        </script>
+</body>
+
+</html>
