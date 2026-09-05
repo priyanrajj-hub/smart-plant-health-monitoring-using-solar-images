@@ -18,31 +18,42 @@
 ## Project Resources
 
 ### Literature
+
 Contains PDFs and markdown summaries of surveyed papers regarding capacitive/acoustic sensing approaches.
-- [Literature Directory](literature/)
+
+- [Literature Directory](docs/literature/)
 
 ### Hardware
+
 Contains schematics, wiring diagrams, BOM, and the multi-sensor firmware.
+
 - [Hardware & Firmware](hardware/)
 - [Source Code](hardware/firmware/)
 
 ### Simulation
+
 Contains the simulation model source code and output plots.
-- [Software / Simulation](software/simulation/)
+
+- [Software / Simulation](algorithm/)
 
 ### Media
+
 Contains actual prototype photos, sensor rig, and result plots.
+
 - [Media Directory](media/)
 - ![Hardware Prototype Placeholder](media/images/Hardware-Prototype-Photos-TODO.txt) (TODO: update link to actual image once uploaded)
 - ![Key Results](docs/images/architecture_diagram.png)
 
 ### Presentations
+
 Contains all SIH/review presentation decks (PPTX + PDF formats).
+
 - [Presentations](media/pptx-pdf/)
 
 ---
 
 ## Details from Base Implementation
+
 # Stressor-Aware Capacitive Sensing: A Diurnally-Corrected, Conformal-Bounded Model Pipeline
 >
 > A comprehensive open-source Python framework for multi-class plant stress detection via diurnally-corrected leaf capacitive sensing.
