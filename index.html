@@ -1105,7 +1105,7 @@
                             lng: (minLng + maxLng) / 2
                         };
 
-                        const overpassPromise = fetch("/api/osm-lookup.js", {
+                        const overpassPromise = fetch("/api/osm-lookup", {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(osmRequestData)
@@ -1160,7 +1160,7 @@
                             const controller = new AbortController();
                             const fetchTimeout = setTimeout(() => controller.abort(), 12000); // 12 seconds
 
-                            const gemRes = await fetch('/api/gemini.js', {
+                            const gemRes = await fetch('/api/gemini', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(geminiPayload),
