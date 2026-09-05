@@ -1,0 +1,80 @@
+diff --git a/index.html b/index.html
+index 921a0c08..570aa727 100644
+--- a/index.html
++++ b/index.html
+@@ -688,7 +688,7 @@
+         <div class="chart-container">
+             <canvas id="trendChart"></canvas>
+         </div>
+-        <button class="btn-360" onclick="open360()">OPEN 360° GROUND-TRUTH (ESP32 NODE)</button>
++        <button class="btn-360" onclick="open360()">OPEN 360° GROUND-TRUTH (SAMPLE MOCK)</button>
+ 
+         <div id="p-error" class="msg-error"></div>
+ <div style="margin-top:25px; text-align:center;"><a href="javascript:void(0)" onclick="alert('SIH26180 Transparency Disclosure:\n\n1. Pest Risk Index: Computed heuristically mapping NDVI structural bounds against Open-Meteo Temp & Humidity (not a direct optical detection).\n\n2. Nutrient Flags: Evaluated using a Pseudo-NDRE approximation from Red/NIR bands.\n\n3. Leaf Classification: Executes using local Edge ML architecture, utilizing MobileNet weights as a hackathon placeholder dataset. Production requires PlantVillage tensors.')" style="color:var(--stress-500); font-family:var(--sans); font-size:12px; text-decoration:underline;">Data & ML Reference Architecture</a></div>
+@@ -704,25 +704,38 @@
+ 
+         document.addEventListener("DOMContentLoaded", () => {
+ 
+-        // HEALTH CHECK
+-        fetch('/api/health').then(r => r.json()).then(data => {
+-            const gem = document.getElementById('h-gemini');
+-            const sen = document.getElementById('h-sentinel');
+-            if(data.integrations.gemini_api.configured) {
+-                gem.innerHTML = '&#9679; Gemini AI: Live';
+-                gem.style.color = 'var(--leaf-300)';
+-            } else {
+-                gem.innerHTML = '&#9679; Gemini AI: Missing Key';
+-                gem.style.color = 'var(--stress-500)';
+-            }
+-            if(data.integrations.sentinel_api.configured) {
+-                sen.innerHTML = '&#9679; Sentinel: Live';
+-                sen.style.color = 'var(--leaf-300)';
+-            } else {
+-                sen.innerHTML = '&#9679; Sentinel: Sample Mode';
+-                sen.style.color = '#eab308'; // yellow
+-            }
+-        }).catch(e => console.log('Health check failed', e));
++        
++        // SAFE HEALTH CHECK
++        fetch('/api/health')
++            .then(r => r.json())
++            .then(data => {
++                try {
++                    const gem = document.getElementById('h-gemini');
++                    const sen = document.getElementById('h-sentinel');
++                    if(gem && data.integrations && data.integrations.gemini_api) {
++                        if(data.integrations.gemini_api.configured) {
++                            gem.innerHTML = '&#9679; Gemini AI: Live';
++                            gem.style.color = 'var(--leaf-300)';
++                        } else {
++                            gem.innerHTML = '&#9679; Gemini AI: Missing Key';
++                            gem.style.color = 'var(--stress-500)';
++                        }
++                    }
++                    if(sen && data.integrations && data.integrations.sentinel_api) {
++                        if(data.integrations.sentinel_api.configured) {
++                            sen.innerHTML = '&#9679; Sentinel: Live';
++                            sen.style.color = 'var(--leaf-300)';
++                        } else {
++                            sen.innerHTML = '&#9679; Sentinel: Sample Mode';
++                            sen.style.color = '#eab308';
++                        }
++                    }
++                } catch(err) {
++                    console.error("Health strip DOM update failed", err);
++                }
++            })
++            .catch(e => console.error('Health fetch network failed', e));
++
+ 
+             // Globe initialization
+             globe = Globe()(document.getElementById('globeViz'))
+@@ -890,6 +903,8 @@
+                                 const gemData = await gemRes.json();
+                                 if (gemData && gemData.candidates) {
+                                     insight = gemData.candidates[0].content.parts[0].text;
++                                    const cb = document.getElementById('confidence-badge');
++                                    if(cb) cb.style.display = 'inline-block';
+                                 } else if (gemData.error) {
+                                     insight = gemData.error;
+                                 }
