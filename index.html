@@ -1115,6 +1115,9 @@
                             rawApiDiv.textContent = JSON.stringify(rawPayload, null, 2);
                         }
 
+                        let currentTemp = 25; // fallback
+                        let deficit = 0; // fallback
+
                         // ALGORITHMIC NDVI CONSTRUCTION (OSINT Proxy)
                         let ndvi = 0.45; // Default safe rural
                         if (oData && oData.elements) {
@@ -1214,6 +1217,7 @@
                         // Render Live Weather Data & Compute Algorithmic Indices
                         if (meteoData && meteoData.current) {
                             const t = meteoData.current.temperature_2m;
+                            currentTemp = t;
                             const h = meteoData.current.relative_humidity_2m;
 
                             document.getElementById('p-temp').textContent = `${t}°C`;
@@ -1266,7 +1270,7 @@
                                 seasonalNorm = baseRains.reduce((a, b) => a + (b || 0), 0) / baseRains.length;
                                 normSource = 'same period last year';
                             }
-                            const deficit = seasonalNorm > 0.01 ? ((1 - (avgRain / seasonalNorm)) * 100).toFixed(0) : 0;
+                            deficit = seasonalNorm > 0.01 ? ((1 - (avgRain / seasonalNorm)) * 100).toFixed(0) : 0;
 
                             document.getElementById('p-rainfall').textContent = totalRain + ' mm';
                             document.getElementById('p-rain-deficit').textContent = (deficit > 0 ? deficit + '% below ' : Math.abs(deficit) + '% above ') + normSource;
