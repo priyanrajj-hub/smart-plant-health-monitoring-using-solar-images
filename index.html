@@ -1100,12 +1100,15 @@
                             if (p[1] < minLat) minLat = p[1];
                             if (p[1] > maxLat) maxLat = p[1];
                         }
-                        const overpassQuery = `[out:json][timeout:5];(way["landuse"](${minLat},${minLng},${maxLat},${maxLng});way["natural"](${minLat},${minLng},${maxLat},${maxLng});way["building"](${minLat},${minLng},${maxLat},${maxLng});way["highway"](${minLat},${minLng},${maxLat},${maxLng}););out tags;`;
+                        const osmRequestData = {
+                            lat: (minLat + maxLat) / 2,
+                            lng: (minLng + maxLng) / 2
+                        };
 
-                        const overpassPromise = fetch("https://overpass-api.de/api/interpreter", {
+                        const overpassPromise = fetch("/api/osm-lookup", {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: 'data=' + encodeURIComponent(overpassQuery)
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(osmRequestData)
                         }).then(r => r.json()).catch(e => null);
 
                         const [meteoData, oData, rainData, rainBaseline] = await Promise.all([meteoPromise, overpassPromise, rainPromise, rainBaselinePromise]);
