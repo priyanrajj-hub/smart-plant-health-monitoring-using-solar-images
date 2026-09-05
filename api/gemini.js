@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
 
         // Check if API key is missing or invalid
         if (!apiKey || apiKey === '' || (typeof apiKey === 'string' && apiKey.includes('YOUR_API_KEY'))) {
-            return res.status(503).json({ error: "AI analysis not yet configured" });
+            return res.status(503).json({ error: "API Key missing! Please configure GEMINI_API_KEY in Vercel Deployment Settings." });
         }
 
         // Basic Edge Rate-Limiting Protection (Max 2 requests per 10s per IP)
@@ -59,7 +59,12 @@ module.exports = async (req, res) => {
         if (!response.ok) {
             const errBody = await response.text();
             console.error("Gemini upstream exception:", errBody);
-            return res.status(502).json({ error: "AI analysis temporarily unavailable" });
+            let errMsg = errBody;
+            try {
+                const parsed = JSON.parse(errBody);
+                if (parsed.error && parsed.error.message) errMsg = parsed.error.message;
+            } catch (ignore) { }
+            return res.status(response.status).json({ error: "Upstream API Error: " + errMsg });
         }
 
         const data = await response.json();
@@ -67,6 +72,6 @@ module.exports = async (req, res) => {
 
     } catch (e) {
         console.error("Critical Proxy Exception:", e);
-        return res.status(500).json({ error: "AI analysis temporarily unavailable" });
+        return res.status(500).json({ error: "Proxy Exception: " + (e.message || "Unknown error") });
     }
 };
