@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 import datetime
 from sentinelhub import SHConfig, SentinelHubStatistical, BBox, CRS, DataCollection
-from sentinelhub.geometry import BBox
 
 load_dotenv()
 
@@ -12,8 +11,8 @@ load_dotenv()
 PUNJAB_BBOX = BBox(bbox=[74.5, 30.5, 75.5, 31.5], crs=CRS.WGS84)
 
 def get_punjab_ndvi():
-    CLIENT_ID = os.getenv('SH_CLIENT_ID')
-    CLIENT_SECRET = os.getenv('SH_CLIENT_SECRET')
+    CLIENT_ID = os.getenv('SENTINEL_HUB_CLIENT_ID')
+    CLIENT_SECRET = os.getenv('SENTINEL_HUB_CLIENT_SECRET')
 
     if not CLIENT_ID or not CLIENT_SECRET:
         raise ValueError("Missing Sentinel Hub OAuth credentials in .env")
@@ -59,9 +58,9 @@ def get_punjab_ndvi():
             resolution=(100, 100) # Reduce resolution to save processing units on large area
         ),
         input_data=[SentinelHubStatistical.input_data(
-            DataCollection.SENTINEL2_L2A,
-            bbox=PUNJAB_BBOX
+            DataCollection.SENTINEL2_L2A
         )],
+        bbox=PUNJAB_BBOX,
         config=config
     )
 

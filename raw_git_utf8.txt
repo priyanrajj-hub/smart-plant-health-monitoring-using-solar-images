@@ -1,0 +1,33 @@
+REMOTE:
+origin	https://github.com/priyanrajj-hub/smart-plant-health-monitoring-using-solar-images.git (fetch)
+origin	https://github.com/priyanrajj-hub/smart-plant-health-monitoring-using-solar-images.git (push)
+
+LOG:
+894325a7 fix: resolve LBP and sentinel bug paths
+1a28970a chore: Finalize project structure and Vercel config
+55cf57b9 docs: Unify naming to Canopy, add verifiable data list and MIT License
+ab10ecf1 test: Implement robust local smoke testing and dev server routes
+839d94ca feat: Integrate Open-Meteo rainfall and honestly label proxy models
+
+STATUS:
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   log.txt
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	raw_git.txt
+	raw_git_utf8.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+PUSH:
+Pushing to https://github.com/priyanrajj-hub/smart-plant-health-monitoring-using-solar-images.git
+To https://github.com/priyanrajj-hub/smart-plant-health-monitoring-using-solar-images.git
+ = [up to date]        main -> main
+updating local tracking ref 'refs/remotes/origin/main'
+Everything up-to-date
