@@ -759,24 +759,24 @@
             <span class="metric-value" id="p-humidity">—</span>
         </div>
         <div class="metric-row">
-            <span class="metric-label" title="IF humidity>65% AND temp>25°C AND NDVI<0.45 THEN HIGH RISK">Pest Risk
-                <span style="font-size:9px; color:#555;">[Rule]</span></span>
-            <span class="metric-value" style="font-size: 13px;" id="p-pest">—</span>
+            <span class="metric-label" title="MOONLIGHT Bayesian Fusion Algorithm">MOONLIGHT CSI <span
+                    style="font-size:9px; color:#eab308;">[Model]</span></span>
+            <span class="metric-value tooltip-container" style="font-size: 13px;">
+                <span id="p-ml-csi" style="font-weight:bold; color:var(--leaf-300);">—</span> <span
+                    style="font-size:10px; color:#aaa;">[Conf: <span id="p-ml-conf">—</span>]</span>
+                <div class="tooltip-text" style="font-size:10px; width:150px; left:-80px;">
+                    WC:<span id="ml-wc">—</span> WA:<span id="ml-wa">—</span> WN:<span id="ml-wn">—</span> WR:<span
+                        id="ml-wr">—</span>
+                </div>
+            </span>
         </div>
         <div class="metric-row">
-            <span class="metric-label" title="Pseudo-NDRE = NDVI*0.85; IF <0.25 THEN Deficient">Nutrient Flags <span
-                    style="font-size:9px; color:#555;">[Rule]</span></span>
-            <span class="metric-value" style="font-size: 13px;" id="p-nutrient">—</span>
+            <span class="metric-label">Polygon Area <span style="font-size:9px; color:#555;">[Computed]</span></span>
+            <span class="metric-value" style="font-size: 13px;" id="p-area">—</span>
         </div>
         <div class="metric-row">
-            <span class="metric-label" title="IF temp>32 AND NDVI<0.3 THEN CRITICAL">Irrigation <span
-                    style="font-size:9px; color:#555;">[Rule]</span></span>
-            <span class="metric-value" style="font-size: 13px;" id="p-irrigation">—</span>
-        </div>
-        <div class="metric-row">
-            <span class="metric-label" title="IF temp>35 THEN Heatwave Stress">Climate Resilience <span
-                    style="font-size:9px; color:#555;">[Rule]</span></span>
-            <span class="metric-value" style="font-size: 13px;" id="p-climate">—</span>
+            <span class="metric-label">Crop Type <span style="font-size:9px; color:#555;">[OSM Landuse]</span></span>
+            <span class="metric-value" style="font-size: 12px; color:#a3d9a5;" id="p-crop-type">—</span>
         </div>
         <div class="metric-row">
             <span class="metric-label">Data Source <span style="font-size:9px; color:#555;">[Meta]</span></span>
@@ -801,9 +801,14 @@
         <div id="temporal-panel"
             style="margin-top:15px; background:rgba(255,255,255,0.03); border:1px solid var(--soil-800); border-radius:8px; padding:12px; display:none;">
             <div
-                style="font-family:var(--sans); font-size:12px; font-weight:600; color:var(--accent); margin-bottom:8px; text-transform:uppercase; letter-spacing:1px; display:flex; justify-content:space-between;">
+                style="font-family:var(--sans); font-size:12px; font-weight:600; color:var(--accent); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px; display:flex; justify-content:space-between;">
                 <span>MOONLIGHT Fusion CSI</span>
                 <span style="font-size:9px; color:var(--leaf-300);">[Bayesian Weighted]</span>
+            </div>
+            <div
+                style="font-family:var(--mono); font-size:10px; color:#aaa; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                Baseline: <span id="ndvi-baseline" style="color:white;">—</span> | Today: <span id="ndvi-current"
+                    style="color:white;">—</span> <span id="ndvi-arrow"></span>
             </div>
 
             <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:10px;">
@@ -1229,31 +1234,32 @@
                                 document.getElementById('p-uv').textContent = meteoData.daily.uv_index_max[0];
                             }
 
-                            // --- SIH CORE METRICS ---
-                            // 1. Pest Risk Index
-                            let pestRisk = "Low Correlation";
-                            if (h > 65 && t > 25 && ndvi < 0.45) pestRisk = "HIGH RISK (Bollworm/Whitefly)";
-                            else if (h > 50 && t > 20) pestRisk = "Moderate Risk";
-                            document.getElementById('p-pest').textContent = pestRisk;
+                            // --- POLYGON SPATIAL METRICS & CROP CONTEXT ---
+                            let areaHa = 0;
+                            if (coords && coords.length > 2) {
+                                // Shoelace formula approximation for polygon area in hectares
+                                let areaStr = 0;
+                                const rad = Math.PI / 180;
+                                const R = 6378137;
+                                for (let i = 0; i < coords.length; i++) {
+                                    let p1 = coords[i];
+                                    let p2 = coords[(i + 1) % coords.length];
+                                    areaStr += (p2[0] - p1[0]) * rad * (2 + Math.sin(p1[1] * rad) + Math.sin(p2[1] * rad)) / 2 * R * R * (p1[1] - p2[1]) * rad;
+                                }
+                                areaHa = (Math.abs(areaStr) / 2 / 10000).toFixed(2);
+                            }
+                            const elArea = document.getElementById('p-area');
+                            if (elArea) elArea.textContent = areaHa > 0 ? areaHa + " ha" : "Point Estimate";
 
-                            // 2. Nutrient Assessment (Pseudo-NDRE Approximation)
-                            const pseudoNdre = ndvi * 0.85; // Pseudo-NDRE approximation (no random component)
-                            let nutrientStr = "Optimal (Approx)";
-                            if (pseudoNdre < 0.25) nutrientStr = "Deficient (Nitrogen Proxy)";
-                            else if (pseudoNdre < 0.4) nutrientStr = "Sub-optimal";
-                            document.getElementById('p-nutrient').textContent = nutrientStr;
-
-                            // 3. Irrigation Needs
-                            let irrigationStr = "Adequate Soil Moisture";
-                            if (t > 32 && ndvi < 0.3) irrigationStr = "CRITICAL: Irrigate < 24h (30% event reduction)";
-                            else if (t > 28 || ndvi < 0.45) irrigationStr = "Monitor. Target < 48 hours.";
-                            document.getElementById('p-irrigation').textContent = irrigationStr;
-
-                            // 4. Climate Resilience Analysis
-                            let climateStr = "Optimal Weather";
-                            if (t > 35) climateStr = "WARNING: Heatwave Stress";
-                            else if (h > 85) climateStr = "WARNING: Precipitation Risk";
-                            document.getElementById('p-climate').textContent = climateStr;
+                            let cropType = "Mixed Vegetation";
+                            if (oData && oData.elements) {
+                                const tagStr = JSON.stringify(oData.elements).toLowerCase();
+                                if (tagStr.includes('orchard') || tagStr.includes('fruit')) cropType = "Tree Crop (e.g., Coconut/Mango)";
+                                else if (tagStr.includes('farm') || tagStr.includes('crop')) cropType = "Row Crop (e.g., Tomato/Chilli)";
+                                else if (tagStr.includes('grass')) cropType = "Pasture / Grassland";
+                            }
+                            const elCrop = document.getElementById('p-crop-type');
+                            if (elCrop) elCrop.textContent = cropType;
                         }
 
                         // ---- MULTI-SIGNAL RAINFALL FUSION ----
@@ -1337,37 +1343,49 @@
                             lead_time_str = "ESTIMATED LEAD TIME TO THRESHOLD: ~" + days + " days";
                         }
 
-                        document.getElementById('ml-csi').textContent = csi.toFixed(3);
-                        document.getElementById('ml-confidence').textContent = (confidence * 100).toFixed(1) + "%";
-                        document.getElementById('ml-wc').textContent = w_C.toFixed(2);
-                        document.getElementById('ml-wa').textContent = w_A.toFixed(2);
-                        document.getElementById('ml-wn').textContent = w_N.toFixed(2);
-                        document.getElementById('ml-wr').textContent = w_R.toFixed(2);
-                        document.getElementById('ml-lead-time').textContent = lead_time_str;
+                        // Safely apply MOONLIGHT texts to ALL instances (both main HUD and temporal panel if present)
+                        const safetxt = (id, txt, color) => {
+                            const e = document.getElementById(id);
+                            if (e) {
+                                e.textContent = txt;
+                                if (color) e.style.color = color;
+                            }
+                        };
+
+                        safetxt('p-ml-csi', csi.toFixed(3), csi > 0.4 ? '#ef4444' : csi > 0.2 ? '#eab308' : '#10b981');
+                        safetxt('p-ml-conf', (confidence * 100).toFixed(1) + "%");
+                        safetxt('ml-csi', csi.toFixed(3));
+                        safetxt('ml-confidence', (confidence * 100).toFixed(1) + "%");
+                        safetxt('ml-wc', w_C.toFixed(2));
+                        safetxt('ml-wa', w_A.toFixed(2));
+                        safetxt('ml-wn', w_N.toFixed(2));
+                        safetxt('ml-wr', w_R.toFixed(2));
+                        safetxt('ml-lead-time', lead_time_str);
 
                         const delta = csi_raw; // Keep variable for downstream logic
                         const clampedBaseline = Math.max(-1, Math.min(1, ndvi - 0.05)); // Fallback baseline proxy
 
-                        document.getElementById('ndvi-baseline').textContent = clampedBaseline.toFixed(3);
-                        document.getElementById('ndvi-current').textContent = ndvi.toFixed(3);
+                        safetxt('ndvi-baseline', clampedBaseline.toFixed(3));
+                        safetxt('ndvi-current', ndvi.toFixed(3));
 
                         let deltaText = '';
-                        let arrowEl = document.getElementById('ndvi-arrow');
+                        let arrowText = '';
+                        let arrowColor = '';
                         if (delta > 0.02) {
                             deltaText = '\u25b2 +' + delta.toFixed(3) + ' improvement (greening trend)';
-                            arrowEl.textContent = '\u2197';
-                            arrowEl.style.color = '#10b981';
+                            arrowText = '\u2197'; arrowColor = '#10b981';
                         } else if (delta < -0.02) {
                             deltaText = '\u25bc ' + delta.toFixed(3) + ' degradation (browning trend)';
-                            arrowEl.textContent = '\u2198';
-                            arrowEl.style.color = '#ef4444';
+                            arrowText = '\u2198'; arrowColor = '#ef4444';
                         } else {
                             deltaText = '\u25cf \u0394' + delta.toFixed(3) + ' — stable (within noise threshold \u00b10.02)';
-                            arrowEl.textContent = '\u2192';
-                            arrowEl.style.color = '#eab308';
+                            arrowText = '\u2192'; arrowColor = '#eab308';
                         }
-                        document.getElementById('ndvi-delta').textContent = deltaText;
-                        document.getElementById('temporal-panel').style.display = 'block';
+                        safetxt('ndvi-arrow', arrowText, arrowColor);
+                        safetxt('ndvi-delta', deltaText);
+
+                        const tPanel = document.getElementById('temporal-panel');
+                        if (tPanel) tPanel.style.display = 'block';
 
                         // ---- EARLY WARNING CASE STUDY ----
                         if (ndvi < 0.4 && ndvi > 0.1) {
@@ -1420,16 +1438,17 @@
 
                         renderChart(ndvi);
                     } catch (err) {
-                        document.getElementById('p-region-name').textContent = "Analysis Failed";
-                        badge.className = 'health-badge';
+                        console.error("UI Render Exception:", err);
 
-                        if (err.message.includes("No clear satellite pass")) {
-                            document.getElementById('p-badge-text').textContent = "Atmospheric Interference";
-                        } else {
-                            document.getElementById('p-badge-text').textContent = "Data Fetch Error";
+                        // Don't overwrite the entire status panel if partial data loaded successfully.
+                        const nameEl = document.getElementById('p-region-name');
+                        if (nameEl && nameEl.textContent.includes("Analyzing")) {
+                            nameEl.textContent = "Analysis Incomplete";
+                            badge.className = 'health-badge';
+                            document.getElementById('p-badge-text').textContent = "Partial Data";
                         }
 
-                        document.getElementById('p-error').textContent = err.message;
+                        safetxt('p-error', "Component Error: " + err.message);
                     }
                 });
             } else {
