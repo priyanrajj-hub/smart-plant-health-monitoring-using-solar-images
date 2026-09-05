@@ -1,6 +1,0 @@
-scikit-image==0.21.0
-numpy==1.25.2
-sentinelhub==3.8.3
-python-dotenv==1.0.0
-fastapi==0.103.1
-uvicorn==0.23.2
