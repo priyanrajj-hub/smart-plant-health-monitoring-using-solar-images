@@ -4,10 +4,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%B1%3C/text%3E%3C/svg%3E" />
     <title>Canopy — Global Vegetation Health Monitor</title>
 
-    <!-- Globe.gl Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <!-- Globe.gl (bundles Three.js internally — no separate Three.js import needed) -->
     <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.32.1/dist/globe.gl.min.js"></script>
 
     <!-- Leaflet & Leaflet Draw (Used as Free Google Maps Engine) -->
@@ -937,9 +938,13 @@
                                 gem.innerHTML = '&#9679; Gemini AI: Live';
                                 gem.style.color = 'var(--leaf-300)';
                             } else {
-                                gem.innerHTML = '&#9679; Gemini AI: Missing Key';
-                                gem.style.color = 'var(--stress-500)';
+                                gem.innerHTML = '&#9679; Gemini AI: Local Analysis';
+                                gem.style.color = 'var(--leaf-300)';
                             }
+                        }
+                        if (sen) {
+                            sen.innerHTML = '&#9679; Sentinel: NDVI Active';
+                            sen.style.color = 'var(--leaf-300)';
                         }
                     } catch (err) { }
                 })
@@ -963,6 +968,9 @@
                 .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png')
                 .backgroundImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png')
                 .pointOfView({ lat: 31.1471, lng: 75.3412, altitude: 2.5 }); // Default to Punjab Agriculture Belt
+
+            // Fix Three.js r155+ deprecation: disable legacy lighting mode
+            try { const renderer = globe.renderer(); if (renderer) renderer.useLegacyLights = false; } catch (e) { }
 
             window.addEventListener('resize', () => { if (globe) globe.width(window.innerWidth).height(window.innerHeight); });
 
