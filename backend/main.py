@@ -64,12 +64,32 @@ class CropRequest(BaseModel):
     tags: dict
     lat: float
     lng: float
+
+class AdvisoryRequest(BaseModel):
+    nNDVI: float
+    lbp_texture_score: float
+    capacitance: float
+    acoustic_score: float
+    lat: float
+    lng: float
     
 @app.post("/api/crop-inference")
 def compute_crop_inference(req: CropRequest):
     result = infer_crop_type(req.tags, req.lat, req.lng)
     prov = "OSM Explicit Tag" if any("OSM" in k for k in result.keys()) else "Inferred from Geo-Heuristics"
     return {"ranked_crops": result, "provenance": prov}
+
+from llm_advisor import get_advisory
+
+@app.post("/api/advisory")
+def generate_advisory(req: AdvisoryRequest):
+    sensor_data = {
+        "nNDVI": req.nNDVI,
+        "lbp_texture_score": req.lbp_texture_score,
+        "capacitance": req.capacitance,
+        "acoustic_score": req.acoustic_score
+    }
+    return get_advisory(sensor_data)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -3,3 +3,4 @@ scikit-image
 fastapi
 uvicorn
 pydantic
+google-generativeai
