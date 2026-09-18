@@ -582,7 +582,8 @@
 </head>
 
 <body>
-    <button class="fab-scanner" onclick="openScanner()">📷</button>
+    <button class="fab-scanner" onclick="openScanner()"
+        title="Live upload disabled (PlantVillage Safe-Mode, click for details)">📷</button>
 
     <!-- Leaf Disease Scanner Modal (TF.js Edge) -->
     <div class="modal-scanner" id="modalScanner">
@@ -638,36 +639,12 @@
                     style="color:var(--leaf-300); text-decoration:none; font-size:10px; font-family:var(--mono);">&#x1F517;
                     Source: GlobalPlantHealth/backend/sentinel_service.py:L67</a>
                 <p style="font-size:12px; color:#555; margin-top:5px; line-height:1.4;">
-                    Algorithm computed values checked against Sentinel Hub EO Browser baseline for validation:
+                    Algorithm computed values are checked against visual satellite inspection heuristics.
+                    Note: To minimize live API costs, this interactive demo utilizes an OpenStreetMap land-use
+                    proxy model rather than pixel-level Sentinel-2 temporal analytics.
+                    The underlying pipeline is designed to support direct multi-spectral ingestion once Sentinel Hub
+                    credentials are wired in.
                 </p>
-                <table style="width:100%; font-size:11px; margin-top:10px; border-collapse:collapse; text-align:left;">
-                    <tr style="border-bottom:1px solid #ccc;">
-                        <th style="padding:4px;">Test Point (Punjab)</th>
-                        <th>App Output</th>
-                        <th>Sentinel-2 Ref.</th>
-                        <th>Error %</th>
-                    </tr>
-                    <tr style="border-bottom:1px solid #eee;">
-                        <td style="padding:4px;">Bare Soil (Sparse)</td>
-                        <td>0.183</td>
-                        <td>0.179</td>
-                        <td>~2.2%</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid #eee;">
-                        <td style="padding:4px;">Dense Crop Field</td>
-                        <td>0.742</td>
-                        <td>0.751</td>
-                        <td>~1.2%</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid #eee;">
-                        <td style="padding:4px;">Mixed Vegetation</td>
-                        <td>0.415</td>
-                        <td>0.410</td>
-                        <td>~1.2%</td>
-                    </tr>
-                </table>
-                <div style="font-size:11px; font-weight:bold; color:var(--stress-500); margin-top:5px;">Mean Absolute
-                    Error: 0.006 (Highly Accurate)</div>
             </div>
 
             <div style="margin-top:20px;">
@@ -695,7 +672,7 @@
                     = <strong>10 events / month</strong>.<br>
                     <strong>Canopy Active Trigger:</strong> Precipitation forecast and NDWI threshold delays suppressed
                     3 unnecessary events.<br>
-                    <strong>Verified Reduction:</strong> (10 baseline - 7 triggers) / 10 = <strong>30% reduction in
+                    <strong>Example Calculation:</strong> (10 baseline - 7 triggers) / 10 = <strong>30% reduction in
                         physical irrigation application cycles</strong> over 30 days.
                 </p>
             </div>
@@ -755,6 +732,9 @@
             <span class="dot" style="background:#888;"></span><span id="p-badge-text">Processing Polygon</span>
         </div>
 
+        <div
+            style="font-family:var(--sans); font-size:11px; font-weight:600; color:var(--accent); margin-bottom:4px; margin-top:10px; text-transform:uppercase; letter-spacing:1px; padding: 4px; border-bottom:1px solid rgba(255,255,255,0.1);">
+            LIVE TELEMETRY</div>
         <div class="metric-row">
             <span class="metric-label">NDVI <span style="font-size:9px; color:#eab308;">[OSINT Proxy]</span></span>
             <span class="metric-value" id="p-ndvi">—</span>
@@ -776,7 +756,7 @@
             <span class="metric-value" id="p-humidity">—</span>
         </div>
         <div class="metric-row">
-            <span class="metric-label" title="MOONLIGHT Bayesian Fusion Algorithm">MOONLIGHT CSI <span
+            <span class="metric-label" title="Confidence-Weighted Bayesian Fusion">Fusion CSI <span
                     style="font-size:9px; color:#eab308;">[Model]</span></span>
             <span class="metric-value tooltip-container" style="font-size: 13px;">
                 <span id="p-ml-csi" style="font-weight:bold; color:var(--leaf-300);">—</span> <span
@@ -800,7 +780,10 @@
             <span class="metric-value" style="font-size: 13px;" id="p-source">—</span>
         </div>
 
-        <div class="insight-box">
+        <div
+            style="font-family:var(--sans); font-size:11px; font-weight:600; color:var(--leaf-300); margin-bottom:4px; margin-top:15px; text-transform:uppercase; letter-spacing:1px; padding: 4px; border-bottom:1px solid rgba(255,255,255,0.1);">
+            AI-SYNTHESIZED INSIGHT</div>
+        <div class="insight-box" style="border:1px solid var(--leaf-300); background:rgba(16,185,129,0.05);">
             <div class="insight-header">Canopy AI Insight <span id="confidence-badge"
                     style="margin-left:auto; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:3px; display:none;"></span>
             </div>
@@ -819,7 +802,7 @@
             style="margin-top:15px; background:rgba(255,255,255,0.03); border:1px solid var(--soil-800); border-radius:8px; padding:12px; display:none;">
             <div
                 style="font-family:var(--sans); font-size:12px; font-weight:600; color:var(--accent); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px; display:flex; justify-content:space-between;">
-                <span>MOONLIGHT Fusion CSI</span>
+                <span>Fusion CSI</span>
                 <span style="font-size:9px; color:var(--leaf-300);">[Bayesian Weighted]</span>
             </div>
             <div
@@ -954,7 +937,7 @@
                                 gem.innerHTML = '&#9679; Gemini AI: Live';
                                 gem.style.color = 'var(--leaf-300)';
                             } else {
-                                gem.innerHTML = '&#9679; Gemini AI: Offline';
+                                gem.innerHTML = '&#9679; Gemini AI: Fallback (Rules)';
                                 gem.style.color = '#8a7a63';
                             }
                         }
@@ -1098,6 +1081,8 @@
                     document.getElementById('p-uv').innerHTML = skeleton;
                     document.getElementById('p-humidity').innerHTML = skeleton;
                     document.getElementById('p-source').innerHTML = skeleton;
+                    document.getElementById('p-ml-csi').innerHTML = skeleton;
+                    document.getElementById('p-ml-conf').innerHTML = "—";
                     document.getElementById('p-insight').innerHTML = '<span style="color:#8a7a63; animation:pulse 1.5s infinite;">Fetching AI analysis... (<span id="ai-timer">0</span>s)</span>';
                     let aiTimerSecs = 0;
                     const aiTimerInterval = setInterval(() => {
@@ -1308,8 +1293,20 @@
                                 }
                             } else {
                                 const errText = await gemRes.text();
-                                console.error(`[CANOPY AI INSIGHT] HTTP Error ${gemRes.status}:`, errText);
-                                throw new Error(`Server returned HTTP ${gemRes.status}`);
+                                let explicitErrorMsg = `Server returned HTTP ${gemRes.status}`;
+                                try {
+                                    const errJson = JSON.parse(errText);
+                                    if (errJson.message && errJson.message.includes('API_KEY_SERVICE_BLOCKED')) {
+                                        explicitErrorMsg = "Gemini API Blocked! Go to Google Cloud Console > APIs & Services > Credentials, edit your API key, and check 'Generative Language API'.";
+                                        console.error(`[CANOPY] 🛑 ACTION REQUIRED: ${explicitErrorMsg}`);
+                                    } else {
+                                        explicitErrorMsg = errJson.error || explicitErrorMsg;
+                                        console.error(`[CANOPY AI INSIGHT] Server Error:`, errJson);
+                                    }
+                                } catch (e) {
+                                    console.error(`[CANOPY AI INSIGHT] HTTP Error ${gemRes.status}:`, errText);
+                                }
+                                throw new Error(explicitErrorMsg);
                             }
                         } catch (e) {
                             const isTimeout = e.name === 'AbortError';
@@ -1424,14 +1421,25 @@
                                 if (inf.best_guess) {
                                     let selectOptions = inf.shortlist ? inf.shortlist.map(c => `<option value="${c.crop}">${c.crop} - ${c.prob}%</option>`).join('') : '';
 
+                                    let lowConfidence = inf.confidence < 60;
+                                    let customInputDisplay = lowConfidence ? 'flex' : 'none';
+                                    let dropdownDisplay = lowConfidence ? 'none' : 'block';
+
                                     cropTypeHTML = `
                                         <div style="display:flex; flex-direction:column; gap:4px;">
                                             <div><span id="inferred-crop-label" style="color:var(--leaf-300);">${inf.best_guess}</span> <span style="font-size:9px; color:#888;">(${inf.confidence}%)</span></div>
-                                            <select onchange="localStorage.setItem('${parcelKey}', this.value); document.getElementById('inferred-crop-label').textContent = this.value; this.style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: this.value, lat: ${centerLat}, lng: ${centerLng} }) });" 
-                                                style="background:transparent; color:#eab308; border:1px dashed #eab308; border-radius:3px; font-family:var(--mono); padding:2px; font-size:10px; cursor:pointer; max-width:180px;">
+                                            
+                                            <select onchange="if(this.value === '___OTHER___') { document.getElementById('custom-crop-container').style.display = 'flex'; this.style.display = 'none'; } else { localStorage.setItem('${parcelKey}', this.value); document.getElementById('inferred-crop-label').textContent = this.value + ' (user-confirmed)'; this.style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: this.value, lat: ${centerLat}, lng: ${centerLng} }) }); }" 
+                                                style="background:transparent; color:#eab308; border:1px dashed #eab308; border-radius:3px; font-family:var(--mono); padding:2px; font-size:10px; cursor:pointer; max-width:180px; display:${dropdownDisplay};">
                                                 <option value="" disabled selected>Not sure? Correct it</option>
                                                 ${selectOptions}
+                                                <option value="___OTHER___">Other (Manual Entry)</option>
                                             </select>
+                                            
+                                            <div id="custom-crop-container" style="display:${customInputDisplay}; flex-direction:row; gap:4px;">
+                                                <input type="text" id="custom-crop-input" placeholder="Enter crop or tree name" style="background:rgba(0,0,0,0.4); color:white; border:1px solid #aaa; border-radius:3px; padding:4px 6px; font-family:var(--sans); font-size:11px; outline:none; max-width:140px;" />
+                                                <button onclick="const v = document.getElementById('custom-crop-input').value; if(v) { localStorage.setItem('${parcelKey}', v); document.getElementById('inferred-crop-label').textContent = v + ' (user-confirmed)'; document.getElementById('custom-crop-container').style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: v, manual: true, lat: ${centerLat}, lng: ${centerLng} }) }); }" style="background:var(--leaf-300); color:black; border:none; border-radius:3px; padding:4px 8px; font-size:11px; cursor:pointer;">Save</button>
+                                            </div>
                                         </div>
                                     `;
                                 } else {

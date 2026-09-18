@@ -7,7 +7,7 @@ with open("index.html", "r", encoding="utf-8") as f:
 moonlight_panel = """
         <div id="temporal-panel" style="margin-top:15px; background:rgba(255,255,255,0.03); border:1px solid var(--soil-800); border-radius:8px; padding:12px; display:none;">
             <div style="font-family:var(--sans); font-size:12px; font-weight:600; color:var(--accent); margin-bottom:8px; text-transform:uppercase; letter-spacing:1px; display:flex; justify-content:space-between;">
-                <span>MOONLIGHT Fusion CSI</span>
+                <span>Fusion CSI</span>
                 <span style="font-size:9px; color:var(--leaf-300);">[Bayesian Weighted]</span>
             </div>
             
