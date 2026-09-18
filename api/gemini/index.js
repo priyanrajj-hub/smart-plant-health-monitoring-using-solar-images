@@ -92,7 +92,8 @@ module.exports = async (req, res) => {
                 replyText = await generateWithFallback(targetModel, false);
             } catch (err) {
                 if (err.type === 'OVERLOADED') {
-                    console.log(`[CANOPY AI INSIGHT] Model ${targetModel} overloaded (503). Falling back to gemini-3.5-flash...`);
+                    console.log(`[CANOPY AI INSIGHT] Model ${targetModel} overloaded (503). Retrying in 2 seconds (falling back to gemini-3.5-flash)...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                     replyText = await generateWithFallback("gemini-3.5-flash", true);
                 } else {
                     throw err; // Re-throw other errors
