@@ -108,21 +108,8 @@ module.exports = async (req, res) => {
 
         } catch (apiError) {
             console.error("SDK Execution Error (Gemini):", apiError);
-            console.error(`[CANOPY SERVER] Warning: Returning simulated AI response due to API failure.`);
-
-            // GRACEFUL MOCK FALLBACK for broken API credentials
-            const mockInsight = {
-                summary: "Environmental telemetry strongly correlates with stable vegetation health. Computed NDVI and historical precipitation profiles suggest adequate moisture retention, though marginal canopy stress may manifest if temperatures elevate.",
-                stress_severity: "Stable to Low Stress",
-                disease_indicator: "No visible signs of significant foliar decay based on generalized proximal indicators",
-                pest_pressure: "Routine ambient risk; no clustered anomalies detected",
-                nutrient_status: "Sufficient generalized canopy structure via NDVI thresholds",
-                irrigation_recommendation: "Maintain standard hydration intervals",
-                climate_risk_flag: "Routine monitoring suggested based on open-meteo telemetry context",
-                confidence_caveat: "Insight derived via system fallback simulation (Google API Key Offline) using open-source telemetry models."
-            };
-
-            return res.status(200).json({ text: JSON.stringify(mockInsight) });
+            // Explicitly throw physical Error because mocked states are prohibited in Phase 1
+            return res.status(500).json({ error: "Gemini APIs Offline or Misconfigured. Simulated responses disabled." });
         }
 
     } catch (e) {

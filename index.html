@@ -1397,8 +1397,11 @@
                             document.getElementById('p-temp').textContent = `${t}°C`;
                             document.getElementById('p-humidity').textContent = `${h}%`;
                             // Update hardware UI panel explicitly using conditional rendering for missing datastreams
-                            document.getElementById('p-capacitance').textContent = c_t === null ? "Not Connected" : `${c_t} pF`;
-                            document.getElementById('p-acoustic').textContent = a_t === null ? "Not Connected" : `${a_t} Hz`;
+                            const cElem = document.getElementById('p-capacitance');
+                            if (cElem) cElem.textContent = c_t === null ? "Not Connected" : `${c_t} pF`;
+
+                            const aElem = document.getElementById('p-acoustic');
+                            if (aElem) aElem.textContent = a_t === null ? "Not Connected" : `${a_t} Hz`;
 
                             if (meteoData.daily && meteoData.daily.sunshine_duration) {
                                 const sunHours = (meteoData.daily.sunshine_duration[0] / 3600).toFixed(1);
@@ -1648,8 +1651,8 @@
                             badge.className = 'health-badge';
                             document.getElementById('p-badge-text').textContent = "Partial Data";
                         }
-
-                        safetxt('p-error', "Component Error: " + err.message);
+                        const errElem = document.getElementById('p-error');
+                        if (errElem) errElem.textContent = "Component Error: " + err.message;
                     }
                 });
             } else {
