@@ -1194,8 +1194,8 @@
                         }
 
                         // ---- MOONLIGHT FUSION [PROBABILISTIC WEIGHTED] ----
-                        const C_t = "Sensor Not Connected"; // Capacitive proxy
-                        const A_t = "Sensor Not Connected"; // Acoustic proxy
+                        const c_t = meteoData.sensorData?.capacitive ?? null;
+                        const a_t = meteoData.sensorData?.acoustic ?? null;
                         const csi = 0.0;
                         const csi_raw = 0.0;
                         const confidence = "Not calibrated";
@@ -1396,6 +1396,9 @@
 
                             document.getElementById('p-temp').textContent = `${t}°C`;
                             document.getElementById('p-humidity').textContent = `${h}%`;
+                            // Update hardware UI panel explicitly using conditional rendering for missing datastreams
+                            document.getElementById('p-capacitance').textContent = c_t === null ? "Not Connected" : `${c_t} pF`;
+                            document.getElementById('p-acoustic').textContent = a_t === null ? "Not Connected" : `${a_t} Hz`;
 
                             if (meteoData.daily && meteoData.daily.sunshine_duration) {
                                 const sunHours = (meteoData.daily.sunshine_duration[0] / 3600).toFixed(1);
