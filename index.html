@@ -1221,7 +1221,6 @@
 
                         try {
                             console.log("[CANOPY AI INSIGHT] Initiating Gemini API fetch...", geminiPayload);
-                            console.log("GEMINI_TIMEOUT_MS =", 35000);
                             const controller = new AbortController();
                             const fetchTimeout = setTimeout(() => controller.abort(), 35000); // 35 seconds
 
@@ -1633,7 +1632,7 @@
                         const basisEl = document.getElementById('p-insight-basis');
                         if (basisEl) basisEl.textContent = '*Basis: OSINT NDVI proxy (' + safeNdviDisplay + ') + Open-Meteo live telemetry';
 
-                        renderChart(ndvi);
+                        renderChart([]);
                     } catch (err) {
                         console.error("UI Render Exception:", err);
 
@@ -1665,28 +1664,45 @@
         }
 
         let healthChart = null;
-        function renderChart(currentNdvi) {
-            const ctx = document.getElementById('trendChart').getContext('2d');
+        function renderChart(historicalNdviArray) {
+            const chartCanvas = document.getElementById('trendChart');
+            const parentDiv = chartCanvas.parentElement;
 
-            // Generate pseudo 7-day trend based on current ndvi
-            const dataPts = [];
-            let val = currentNdvi;
-            for (let i = 0; i < 7; i++) {
-                dataPts.unshift(val);
-                // Replaced Math.random simulation variance to maintain chart integrity
-                val = val;
-                val = Math.max(-1, Math.min(1, val));
+            // Check for minimum data requirement
+            if (!historicalNdviArray || historicalNdviArray.length < 2) {
+                chartCanvas.style.display = 'none';
+                let noDataMsg = document.getElementById('no-data-msg');
+                if (!noDataMsg) {
+                    noDataMsg = document.createElement('div');
+                    noDataMsg.id = 'no-data-msg';
+                    noDataMsg.style.color = '#888';
+                    noDataMsg.style.textAlign = 'center';
+                    noDataMsg.style.paddingTop = '40px';
+                    noDataMsg.style.fontFamily = 'monospace';
+                    noDataMsg.innerText = 'No historical data yet';
+                    parentDiv.appendChild(noDataMsg);
+                }
+                noDataMsg.style.display = 'block';
+                return;
             }
 
+            // If we have real data, proceed to render
+            chartCanvas.style.display = 'block';
+            const noDataMsg = document.getElementById('no-data-msg');
+            if (noDataMsg) noDataMsg.style.display = 'none';
+
+            const ctx = chartCanvas.getContext('2d');
             if (healthChart) healthChart.destroy();
+
+            const labels = historicalNdviArray.map((_, i) => `Visit ${i + 1}`);
 
             healthChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Today'],
+                    labels: labels,
                     datasets: [{
-                        label: 'NDVI Trajectory (simulated — no historical API)',
-                        data: dataPts,
+                        label: 'Real NDVI Logged',
+                        data: historicalNdviArray,
                         borderColor: 'rgba(255, 230, 200, 0.7)',
                         backgroundColor: 'rgba(255, 230, 200, 0.1)',
                         borderWidth: 1.5,
