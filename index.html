@@ -700,8 +700,8 @@
     <!-- Integration Status Strip -->
     <div id="system-health-strip"
         style="position:fixed; top:0; right:0; z-index:99999; background:var(--soil-900); display:flex; gap:15px; padding:6px 15px; font-size:10px; font-family:var(--sans); font-weight:600; text-transform:uppercase; justify-content:flex-end; border-bottom-left-radius:8px;">
-        <span id="h-gemini" style="color:var(--stress-500);">&#9679; Gemini AI: Checking</span>
-        <span id="h-sentinel" style="color:var(--stress-500);">&#9679; Sentinel: Checking</span>
+        <span id="h-gemini" style="color:#aaa;">&#9679; Gemini AI: CONNECTING</span>
+        <span id="h-sentinel" style="color:#aaa;">&#9679; Sentinel: CONNECTING</span>
     </div>
 
 
@@ -877,12 +877,12 @@
                 onclick="const p = document.getElementById('raw-api-panel'); p.style.display = p.style.display === 'none' ? 'block' : 'none';"
                 style="width:100%; text-align:left; background:rgba(0,0,0,0.3); color:#8a7a63; padding:10px; border:none; font-family:var(--sans); font-size:11px; cursor:pointer;"
                 aria-expanded="false">
-                ▼ View Raw API Response JSON [Open-Meteo & Sentinel]
+                ▼ View Data Provenance & Confidence Ledger
             </button>
             <div id="raw-api-panel"
                 style="display:none; padding:10px; background:rgba(0,0,0,0.5); border-top:1px solid rgba(255,255,255,0.05);">
                 <pre id="raw-api-json"
-                    style="margin:0; font-family:var(--mono); font-size:9px; color:#a3d9a5; overflow-x:auto; white-space:pre-wrap;"></pre>
+                    style="margin:0; font-family:var(--mono); font-size:9px; color:#a3d9a5; overflow-x:auto; white-space:pre-wrap;">Awaiting parcel selection...</pre>
             </div>
         </div>
         <div id="p-error" class="msg-error"></div>
@@ -1129,10 +1129,24 @@
                         const rawApiDiv = document.getElementById('raw-api-json');
                         if (rawApiDiv) {
                             const rawPayload = {
-                                "Sentinel_2_Proxy": "NDVI Extracted via OSINT Overpass",
-                                "OpenMeteo": meteoData || "Failed",
-                                "Precipitation_14Day_Live": rainData || "Failed",
-                                "Precipitation_Baseline": rainBaseline || "Failed"
+                                "Metric: NDVI": {
+                                    "status": "PROXY / SIMULATED",
+                                    "source": oData ? "OSM Land-use Heuristics" : "Offline Fallback Simulation Engine",
+                                    "confidence": oData ? 0.65 : 0.40
+                                },
+                                "Metric: Weather (Live)": {
+                                    "status": meteoData ? "LIVE" : "UNAVAILABLE",
+                                    "source": "Open-Meteo API",
+                                    "acquisition": new Date().toISOString()
+                                },
+                                "Metric: Crop Inference": {
+                                    "status": "AI_ESTIMATE",
+                                    "model": "Canopy MobileNet Edge Placeholder"
+                                },
+                                "System_Telemetry_Status": {
+                                    "Sentinel_2_B04_B08": "UNAVAILABLE_PROXY_ACTIVE",
+                                    "Cloud_Cover_Contamination": "SIMULATED_20_PERCENT"
+                                }
                             };
                             rawApiDiv.textContent = JSON.stringify(rawPayload, null, 2);
                         }
@@ -1172,12 +1186,12 @@
 {
   "summary": "one sentence overview of overall crop canopy health",
   "stress_severity": "Low | Moderate | High | Critical",
-  "crop_disease_risk": "estimated disease risk with likely disease type if inferable from NDVI/weather pattern (e.g. fungal risk under high humidity)",
-  "pest_risk": "estimated pest pressure level and likely pest category if inferable (e.g. sap-sucking pests favored by current temperature/humidity)",
-  "nutrient_deficiency_estimate": "estimated N-P-K deficiency signals inferable from canopy density/color patterns — name which nutrient is most likely limiting if any signal suggests it",
-  "irrigation_recommendation": "estimated water need based on current NDVI, rainfall deficit, and temperature — e.g. 'irrigate within 2-3 days' or 'no immediate action needed'",
-  "climate_risk_flag": "flag drought/heat-wave/flood risk specifically if current weather data (temperature, rainfall deficit, humidity) crosses recognizable thresholds",
-  "confidence_caveat": "AI-estimated reasoning based on satellite/weather telemetry, not direct sensor or lab measurement — requires ground validation"
+  "disease_risk_assessment": "estimated disease risk level based on environmental factors (e.g., fungal risk under high humidity) - Do not act as a diagnosis",
+  "pest_risk_assessment": "estimated pest pressure level based on environment - Do not act as a diagnosis",
+  "nutrient_stress_risk": "estimated nutrient stress risk level - Do not predict exact NPK values from NDVI alone",
+  "irrigation_recommendation": "estimated water need based on current NDVI, rainfall deficit, and temperature",
+  "climate_risk_flag": "flag drought/heat-wave/flood risk if current weather data crosses thresholds",
+  "confidence_caveat": "AI-estimated reasoning based on telemetry, not direct sensor measurement — requires ground validation"
 }` }]
                             }]
                         };
@@ -1210,41 +1224,52 @@
                                         let cleanStr = rawString.replace(/^```(json)?/, '').replace(/```$/, '').trim();
                                         const j = JSON.parse(cleanStr);
 
+                                        const expText = `Analysis based on:\n- Computed NDVI: ${ndvi.toFixed(3)}\n- Temp: ${currentTemp}°C \n- Rainfall Deficit: ${deficit || 0}%\n- Fusion CSI (Stress Index): ${csi.toFixed(3)}\n- AI Confidence: ${(confidence * 100).toFixed(1)}%`;
+
                                         insight = `
-                                            <div style="margin-bottom:12px; line-height:1.4;">${j.summary}</div>
+                                            <div style="margin-bottom:12px; line-height:1.4;">${j.summary || 'Summary unavailable.'}</div>
                                             
                                             <div style="color:var(--leaf-500); font-weight:bold; font-size:12px; border-bottom:1px solid #333; padding-bottom:6px; margin-bottom:8px; margin-top:15px; letter-spacing:1px;">
-                                                > FIELD DIAGNOSTIC ESTIMATE
+                                                > FIELD RISK ESTIMATE
                                             </div>
 
                                             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:6px;">
-                                                <span style="color:#aaa; font-size:11px;">STRESS SEVERITY</span>
+                                                <span style="color:#aaa; font-size:11px;">
+                                                    STRESS SEVERITY 
+                                                    <a href="javascript:void(0)" onclick="alert('${expText}')" style="color:#eab308; font-size:9px; text-decoration:none; margin-left:4px; padding:2px 4px; border:1px solid #eab308; border-radius:3px; background:rgba(234,179,8,0.1);">[Why?]</a>
+                                                </span>
                                                 <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.stress_severity}</strong> 
+                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.stress_severity || 'Unavailable'}</strong> 
                                                     <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
                                                 </div>
                                             </div>
 
                                             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:6px;">
-                                                <span style="color:#aaa; font-size:11px;">CROP DISEASE RISK</span>
+                                                <span style="color:#aaa; font-size:11px;">
+                                                    DISEASE RISK ASSESSMENT
+                                                </span>
                                                 <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.crop_disease_risk}</strong> 
+                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.disease_risk_assessment || j.crop_disease_risk || 'Unavailable'}</strong> 
                                                     <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
                                                 </div>
                                             </div>
 
                                             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:6px;">
-                                                <span style="color:#aaa; font-size:11px;">PEST RISK</span>
+                                                <span style="color:#aaa; font-size:11px;">
+                                                    PEST RISK ASSESSMENT
+                                                </span>
                                                 <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.pest_risk}</strong> 
+                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.pest_risk_assessment || j.pest_risk || 'Unavailable'}</strong> 
                                                     <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
                                                 </div>
                                             </div>
 
                                             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:6px;">
-                                                <span style="color:#aaa; font-size:11px;">NUTRIENT DEFICIENCY</span>
+                                                <span style="color:#aaa; font-size:11px;">
+                                                    NUTRIENT STRESS RISK
+                                                </span>
                                                 <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.nutrient_deficiency_estimate}</strong> 
+                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.nutrient_stress_risk || j.nutrient_deficiency_estimate || 'Unavailable'}</strong> 
                                                     <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
                                                 </div>
                                             </div>
@@ -1252,7 +1277,7 @@
                                             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:6px;">
                                                 <span style="color:#aaa; font-size:11px;">IRRIGATION RECOMMENDATION</span>
                                                 <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.irrigation_recommendation}</strong> 
+                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.irrigation_recommendation || 'Unavailable'}</strong>
                                                     <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
                                                 </div>
                                             </div>
@@ -1260,7 +1285,7 @@
                                             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:12px;">
                                                 <span style="color:#aaa; font-size:11px;">CLIMATE RISK FLAG</span>
                                                 <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.climate_risk_flag}</strong> 
+                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.climate_risk_flag || 'Unavailable'}</strong> 
                                                     <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
                                                 </div>
                                             </div>
@@ -1493,7 +1518,7 @@
                         }
 
 
-                        // ---- MOONLIGHT FUSION [BAYESIAN O(1)] ----
+                        // ---- MOONLIGHT FUSION [PROBABILISTIC WEIGHTED] ----
 
                         // Raw normalized scores (Simulated/Proxy sources for hardware)
                         const C_t = 0.4; // Capacitive proxy
