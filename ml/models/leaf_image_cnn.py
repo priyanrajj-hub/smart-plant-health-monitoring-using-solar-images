@@ -27,6 +27,23 @@ def calibration_temperature_scaling(logits, temperature_parameter):
     """ Post-hoc probability calibration scaling """
     return logits / temperature_parameter
 
+def train_model(model, train_loader, optimizer, criterion, epochs=1):
+    """
+    Executes core training loop over the PyTorch dataloader.
+    """
+    model.train()
+    for epoch in range(epochs):
+        running_loss = 0.0
+        for inputs, labels in train_loader:
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+        print(f"Epoch {epoch+1} completed. Loss: {running_loss/len(train_loader):.4f}")
+    return model
+
 if __name__ == "__main__":
     model = CropDiseaseClassifier(num_classes=5)
     dummy_input = torch.randn(1, 3, 224, 224)
