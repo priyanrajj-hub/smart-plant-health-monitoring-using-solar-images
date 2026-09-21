@@ -1283,7 +1283,7 @@
                                                     DISEASE RISK ASSESSMENT
                                                 </span>
                                                 <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.disease_risk_assessment || j.crop_disease_risk || 'Unavailable'}</strong> 
+                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.disease_risk_assessment || j.crop_disease_risk || j.disease_indicator || 'Unavailable'}</strong> 
                                                     <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
                                                 </div>
                                             </div>
@@ -1293,7 +1293,7 @@
                                                     PEST RISK ASSESSMENT
                                                 </span>
                                                 <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.pest_risk_assessment || j.pest_risk || 'Unavailable'}</strong> 
+                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.pest_risk_assessment || j.pest_risk || j.pest_pressure || 'Unavailable'}</strong> 
                                                     <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
                                                 </div>
                                             </div>
@@ -1303,7 +1303,7 @@
                                                     NUTRIENT STRESS RISK
                                                 </span>
                                                 <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.nutrient_stress_risk || j.nutrient_deficiency_estimate || 'Unavailable'}</strong> 
+                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.nutrient_stress_risk || j.nutrient_deficiency_estimate || j.nutrient_status || 'Unavailable'}</strong> 
                                                     <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
                                                 </div>
                                             </div>
