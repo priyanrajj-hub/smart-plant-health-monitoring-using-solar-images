@@ -1673,7 +1673,8 @@
             let val = currentNdvi;
             for (let i = 0; i < 7; i++) {
                 dataPts.unshift(val);
-                val = val + (Math.random() * 0.08 - 0.04);
+                // Replaced Math.random simulation variance to maintain chart integrity
+                val = val;
                 val = Math.max(-1, Math.min(1, val));
             }
 

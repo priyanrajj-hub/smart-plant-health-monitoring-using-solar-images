@@ -19,19 +19,10 @@ def retrain_models(train_all=False, tabular_only=False, image_only=False):
         print("[1/2] Launching LightGBM Tabular Stress and NPK Estimators...")
         try:
             from ml.models.stress_tabular import StressSeverityModel
-            # Generate synthetic physical ground-truth conforming to constraints to jumpstart continuous testing
-            print("      Constructing validated training matrices respecting 'provenance' rules...")
-            dummy_df = pd.DataFrame({
-                'place_id': np.random.randint(1, 10, 100),
-                'ndvi_anomaly': np.random.rand(100),
-                'cum_heat_stress_7d': np.random.rand(100) * 100,
-                'days_since_rain': np.random.randint(0, 30, 100),
-                'elevation_m': np.random.randint(100, 1000, 100),
-                'stress_severity': np.random.randint(0, 4, 100),
-                'provenance': ['measured_sentinel'] * 100
-            })
+            # Pass realistic dataframe (empty since no authentic data yet)
+            real_df = pd.DataFrame(columns=['place_id', 'ndvi_anomaly', 'cum_heat_stress_7d', 'days_since_rain', 'elevation_m', 'stress_severity', 'provenance'])
             model = StressSeverityModel()
-            success = model.train(dummy_df)
+            success = model.train(real_df)
             if success:
                 print("      Tabular Models successfully loaded and re-fitted. Updated weights persisted to .cache/models/tabular_vlatest.pkl")
             else:
@@ -44,16 +35,17 @@ def retrain_models(train_all=False, tabular_only=False, image_only=False):
         try:
             import torch
             from ml.models.leaf_image_cnn import CropDiseaseClassifier, train_model
-            model = CropDiseaseClassifier(num_classes=10)
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-            criterion = torch.nn.CrossEntropyLoss()
             
-            # Synthetic dataloader construct for automated testing loop guarantees
-            print("      Injecting 16x Image classification tensors for PyTorch epoch simulation...")
-            dummy_loader = [(torch.randn(4, 3, 224, 224), torch.randint(0, 10, (4,))) for _ in range(4)]
-            
-            trained_model = train_model(model, dummy_loader, optimizer, criterion, epochs=1)
-            print("      CNN Models successfully fine-tuned on new leaf observations. OOD validation enforced.")
+            # Enforce data limits
+            real_images = []
+            if len(real_images) < 200:
+                print("      ERROR: Insufficient labeled data to train Vision Model (requires >= 200 samples). Abstaining.")
+            else:
+                model = CropDiseaseClassifier(num_classes=10)
+                optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+                criterion = torch.nn.CrossEntropyLoss()
+                # trained_model = train_model(...)
+
         except ImportError as e:
             print(f"      ERROR: Vision module imports failed: {e}")
     
