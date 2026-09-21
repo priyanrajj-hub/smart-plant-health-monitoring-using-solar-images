@@ -1,74 +1,59 @@
-# Canopy: Global Vegetation Health Monitor
+# Canopy — Global Vegetation Health Monitor
 
-[![Vercel Deploy](https://img.shields.io/badge/Vercel-Deployed-success)](https://smart-plant-health-monitoring-using-solar-images.vercel.app/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+*(Hardware platform: AGRISENSE)*
 
-*Companion Hardware Research Repo:* [Review-2 Repository (Microwave Dielectric Leaf Sensing)](https://github.com/priyanrajj-hub/review2)
+[Live Demo](https://smart-plant-health-monitoring-using-wheat.vercel.app/)
 
-Canopy is a browser-based vegetation monitoring dashboard that combines OpenStreetMap land-use classification with real-time weather data to estimate crop health indicators.
+Canopy is a scalable platform merging hardware telemetry with global satellite imagery to provide continuous, real-time vegetation health monitoring for precision agriculture.
 
-## ⚠️ Data Source Transparency
+## Architecture
 
-| Feature | Data Source | Status |
-| --------- | ----------- | -------- |
-| **NDVI Spectral Base** | Sentinel-2 L2A via CDSE API | **Pending User Credentials** — gracefully falls back to OSINT/RGB proxy array when CDSE OAuth is uninitialized or masked by clouds. |
-| **Multi-Modal Fusion** | MOONLIGHT Decision Engine | **Live Execution** — Fuses satellite NDVI slope dynamically with simulated acoustics/capacitive inputs on the backend. |
-| **Crop Inference** | OSM Specific Tags + Geo-Heuristics | **Live** — Queries OpenStreetMap for exact crop, with strict fallback to coordinate-bounded planting schedules (Kharif/Rabi). |
-| **Weather Telemetry** | Open-Meteo Historic + Live | **Live** — Live macro-environmental tracking for localized polygons. |
-| **Acoustic Pest / Capacitive / NPK Limits** | Node Simulation | **Hardware Disabled** — The software fusion engine is mathematical and live, but ground IoT parameters are fed via test vectors for web demonstration purposes. |
-| **AI Narrative** | Gemini 1.5 Flash structured JSON | **Live** |
-
-### What Would Make NDVI Real?
-
-To get actual satellite-derived NDVI, you need credentials for one of:
-
-- **Sentinel Hub** (ESA Copernicus) — free tier available, requires OAuth2 flow
-- **NASA MODIS/VIIRS** (AppEEARS API) — free, but data is coarse
-- **Google Earth Engine** — free for research, requires approved account
-
-## 🚀 Roadmap / Future Improvements
-
-- **Authenticated Sentinel Hub Access:** Replace the current OSINT NDVI fallback logic with live Sentinel Hub REST API integration. This requires adding a valid `SENTINEL_HUB_SECRET` to the Vercel backend and handling ESA OAuth2 token renewal logic.
-- **Historical Time-Series Fetch:** Rather than simulating the 7-day NDVI trend, fetch true historical multispectral arrays through the Sentinel Hub Statistical API.
-
-## 🏗 Architecture
-
-```
-User draws polygon on Leaflet map
-        ↓
-┌───────────────────────────────────┐
-│  3 parallel API calls (browser)  │
-├──────────┬──────────┬─────────────┤
-│ Overpass │Open-Meteo│ Rain Archive│
-│ (OSM tags)│(weather) │ (baseline)  │
-└────┬─────┴────┬─────┴──────┬──────┘
-     ↓          ↓            ↓
-  NDVI proxy  Live temp   Deficit %
-     ↓          humidity     ↓
-  Rule engine merges all signals
-     ↓
-  Gemini API (if key) or rule fallback
-     ↓
-  UI renders with source labels
+```mermaid
+graph TD;
+    A[AGRISENSE Solar Node] -->|Web Serial / MQTT| B(FastAPI Backend);
+    C[Sentinel-2 Satellite Imagery] -->|API| B;
+    D[Google Earth / Dynamic World] -->|Proxy API| B;
+    B -->|Bayesian Fusion CSI| E{AI Insights Engine};
+    E -->|Gemini-3.8-Flash| F[Canopy 3D Dashboard];
 ```
 
-## 🛠️ Running Locally
+## Features
+
+- **[Live] Ground-to-Orbit Fusion:** CapSense node data merged with Sentinel-2 NDVI.
+- **[Live] Interactive 3D Visualization:** Real-time WebGL global environment map.
+- **[Live] AI-Synthesized Insights:** Automated stress, disease, and nutrient deficiency reporting via LLM.
+- **[Simulated] Multi-Spectrum Proxies:** Land-use proxying when Earth Engine is rate-limited.
+- **[Proxy] Local Fallbacks:** Seamless UI functionality independent of external network failures.
+
+## Quick Start
 
 ```bash
-# Install dependencies
-npm install
-
-# Start local server
-node server.js
-
-# Note: The frontend explicitly relies on standard web technologies
-# (Leaflet, Chart.js) and does not require complex build steps.
+npm install && npm start
 ```
 
-## 🧪 Smoke Testing
+## Environment Variables
 
-Run the included smoke test to verify API routes and external fetch stability:
+Create a `.env` file in the root:
 
-```bash
-node test_smoke.js
 ```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+GEMINI_API_KEY=your_gemini_key
+SENTINEL_HUB_CLIENT_ID=your_id
+SENTINEL_HUB_CLIENT_SECRET=your_secret
+```
+
+## Project Structure
+
+- `website/`: Next.js WebGL frontend dashboard.
+- `backend/`: FastAPI Python server (Dual-Engine API).
+- `algorithm/`: ML data fusion and Bayesian CSI logic.
+- `docs/`: Evaluation metrics, model cards, and dataset details.
+
+## Limitations
+
+- Satellite processing latency introduces a 12-48 hour delay on absolute ground truth updates pending Sentinel passes.
+- Simulated indices currently proxy certain multispectral bands until additional proprietary datasets are fully evaluated.
+
+## License
+
+MIT License

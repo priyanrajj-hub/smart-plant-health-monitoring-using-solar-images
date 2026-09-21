@@ -632,18 +632,9 @@
             </div>
 
             <div style="margin-top:20px;">
-                <strong style="color:var(--accent); font-family:var(--sans);">2. NDVI CALCULATION
-                    ACCURACY</strong><br><a
-                    href="https://github.com/priyanrajj-hub/smart-plant-health-monitoring-using-solar-images/blob/main/GlobalPlantHealth/backend/sentinel_service.py#L67"
-                    target="_blank"
-                    style="color:var(--leaf-300); text-decoration:none; font-size:10px; font-family:var(--mono);">&#x1F517;
-                    Source: GlobalPlantHealth/backend/sentinel_service.py:L67</a>
+                <strong style="color:var(--accent); font-family:var(--sans);">2. NDVI PROXY SOURCE</strong><br>
                 <p style="font-size:12px; color:#555; margin-top:5px; line-height:1.4;">
-                    Algorithm computed values are checked against visual satellite inspection heuristics.
-                    Note: To minimize live API costs, this interactive demo utilizes an OpenStreetMap land-use
-                    proxy model rather than pixel-level Sentinel-2 temporal analytics.
-                    The underlying pipeline is designed to support direct multi-spectral ingestion once Sentinel Hub
-                    credentials are wired in.
+                    NDVI is an OSM land-use proxy; Sentinel-2 is not used in this demo.
                 </p>
             </div>
 
@@ -672,7 +663,8 @@
                     = <strong>10 events / month</strong>.<br>
                     <strong>Canopy Active Trigger:</strong> Precipitation forecast and NDWI threshold delays suppressed
                     3 unnecessary events.<br>
-                    <strong>Example Calculation:</strong> (10 baseline - 7 triggers) / 10 = <strong>30% reduction in
+                    <strong>Illustrative example (not measured):</strong> (10 baseline - 7 triggers) / 10 = <strong>30%
+                        reduction in
                         physical irrigation application cycles</strong> over 30 days.
                 </p>
             </div>
@@ -925,8 +917,11 @@
             const gem = document.getElementById('h-gemini');
             const sen = document.getElementById('h-sentinel');
 
-            fetch('/api/health')
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            fetch('/api/health', { signal: controller.signal })
                 .then(r => {
+                    clearTimeout(timeoutId);
                     if (!r.ok) throw new Error("Backend blocked by Vercel, switching to Local Edge");
                     return r.json();
                 })
@@ -1075,12 +1070,10 @@
                     badge.className = 'health-badge loading-skeleton';
                     document.getElementById('p-badge-text').textContent = "Fetching Live Data...";
                     const skeleton = '<span class="loading-skeleton" style="width:50px;height:12px;display:inline-block;border-radius:4px;"></span>';
-                    document.getElementById('p-ndvi').innerHTML = skeleton;
-                    document.getElementById('p-temp').innerHTML = skeleton;
-                    document.getElementById('p-sun').innerHTML = skeleton;
-                    document.getElementById('p-uv').innerHTML = skeleton;
-                    document.getElementById('p-humidity').innerHTML = skeleton;
-                    document.getElementById('p-source').innerHTML = skeleton;
+                    ['p-ndvi', 'p-temp', 'p-sun', 'p-uv', 'p-humidity', 'p-source'].forEach(id => {
+                        let el = document.getElementById(id);
+                        if (el) { el.classList.add('is-loading'); el.textContent = ''; }
+                    });
                     document.getElementById('p-ml-csi').innerHTML = skeleton;
                     document.getElementById('p-ml-conf').innerHTML = "—";
                     document.getElementById('p-insight').innerHTML = '<span style="color:#8a7a63; animation:pulse 1.5s infinite;">Fetching AI analysis... (<span id="ai-timer">0</span>s)</span>';
@@ -1152,10 +1145,10 @@
                         if (oData && oData.elements) {
                             const activeTags = JSON.stringify(oData.elements).toLowerCase();
                             if (activeTags.includes("water") || activeTags.includes("river")) ndvi = -0.3;
-                            else if (activeTags.includes("building") || activeTags.includes("residential")) ndvi = 0.12;
-                            else if (activeTags.includes("highway") || activeTags.includes("road") || activeTags.includes("asphalt")) ndvi = 0.05;
                             else if (activeTags.includes("farmland") || activeTags.includes("orchard")) ndvi = 0.72;
                             else if (activeTags.includes("grass")) ndvi = 0.38;
+                            else if (activeTags.includes("building") || activeTags.includes("residential")) ndvi = 0.12;
+                            else if (activeTags.includes("highway") || activeTags.includes("road") || activeTags.includes("asphalt")) ndvi = 0.05;
                         }
 
                         // Deterministic hash based on coords so same popup yields exact same UI state
@@ -1429,7 +1422,7 @@
                                         <div style="display:flex; flex-direction:column; gap:4px;">
                                             <div><span id="inferred-crop-label" style="color:var(--leaf-300);">${inf.best_guess}</span> <span style="font-size:9px; color:#888;">(${inf.confidence}%)</span></div>
                                             
-                                            <select onchange="if(this.value === '___OTHER___') { document.getElementById('custom-crop-container').style.display = 'flex'; this.style.display = 'none'; } else { localStorage.setItem('${parcelKey}', this.value); document.getElementById('inferred-crop-label').textContent = this.value + ' (user-confirmed)'; this.style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: this.value, lat: ${centerLat}, lng: ${centerLng} }) }); }" 
+                                            <select id="crop-correction-dropdown" name="crop-correction-dropdown" onchange="if(this.value === '___OTHER___') { document.getElementById('custom-crop-container').style.display = 'flex'; this.style.display = 'none'; } else { localStorage.setItem('${parcelKey}', this.value); document.getElementById('inferred-crop-label').textContent = this.value + ' (user-confirmed)'; this.style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: this.value, lat: ${centerLat}, lng: ${centerLng} }) }); }" 
                                                 style="background:transparent; color:#eab308; border:1px dashed #eab308; border-radius:3px; font-family:var(--mono); padding:2px; font-size:10px; cursor:pointer; max-width:180px; display:${dropdownDisplay};">
                                                 <option value="" disabled selected>Not sure? Correct it</option>
                                                 ${selectOptions}
@@ -1437,7 +1430,7 @@
                                             </select>
                                             
                                             <div id="custom-crop-container" style="display:${customInputDisplay}; flex-direction:row; gap:4px;">
-                                                <input type="text" id="custom-crop-input" placeholder="Enter crop or tree name" style="background:rgba(0,0,0,0.4); color:white; border:1px solid #aaa; border-radius:3px; padding:4px 6px; font-family:var(--sans); font-size:11px; outline:none; max-width:140px;" />
+                                                <input type="text" id="custom-crop-input" name="custom-crop-input" placeholder="Enter crop or tree name" style="background:rgba(0,0,0,0.4); color:white; border:1px solid #aaa; border-radius:3px; padding:4px 6px; font-family:var(--sans); font-size:11px; outline:none; max-width:140px;" />
                                                 <button onclick="const v = document.getElementById('custom-crop-input').value; if(v) { localStorage.setItem('${parcelKey}', v); document.getElementById('inferred-crop-label').textContent = v + ' (user-confirmed)'; document.getElementById('custom-crop-container').style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: v, manual: true, lat: ${centerLat}, lng: ${centerLng} }) }); }" style="background:var(--leaf-300); color:black; border:none; border-radius:3px; padding:4px 8px; font-size:11px; cursor:pointer;">Save</button>
                                             </div>
                                         </div>
@@ -1612,16 +1605,26 @@
 
                         let confLabel = 'LOW';
                         let confColor = '#ef4444';
-                        if (confScore >= 80) { confLabel = 'HIGH'; confColor = '#10b981'; }
-                        else if (confScore >= 50) { confLabel = 'MEDIUM'; confColor = '#eab308'; }
+                        let isRuleBased = insight && (insight.includes('unavailable') || insight.includes('Fallback logic'));
+
+                        if (isRuleBased) {
+                            confLabel = 'RULE-BASED';
+                            confColor = '#8a7a63'; // Neutral/fallback color
+                        } else if (confScore >= 80) {
+                            confLabel = 'HIGH'; confColor = '#10b981';
+                        } else if (confScore >= 50) {
+                            confLabel = 'MEDIUM'; confColor = '#eab308';
+                        }
 
                         confBadge.style.display = 'inline-block';
                         let confBreakdown = 'Score Decomposition:\n';
-                        confBreakdown += (ndvi !== null && !isNaN(ndvi)) ? '\u2705 NDVI data: +30%\n' : '\u274c NDVI data: missing\n';
-                        confBreakdown += (meteoData && meteoData.current) ? '\u2705 Weather telemetry: +30%\n' : '\u274c Weather telemetry: missing\n';
-                        confBreakdown += (oData && oData.elements && oData.elements.length > 0) ? '\u2705 Land-use classification: +20%\n' : '\u274c Land-use classification: no data\n';
-                        confBreakdown += (insight && !insight.includes('unavailable')) ? '\u2705 AI analysis: +20%' : '\u274c AI analysis: failed';
-                        confBadge.innerHTML = `Confidence: ${confLabel} <span title="${confBreakdown}" style="cursor:help; opacity:0.7; text-decoration:underline dotted;">(${confScore}%)</span>`;
+                        confBreakdown += (ndvi !== null && !isNaN(ndvi)) ? '✅ NDVI data: +30%\n' : '❌ NDVI data: missing\n';
+                        confBreakdown += (meteoData && meteoData.current) ? '✅ Weather telemetry: +30%\n' : '❌ Weather telemetry: missing\n';
+                        confBreakdown += (oData && oData.elements && oData.elements.length > 0) ? '✅ Land-use classification: +20%\n' : '❌ Land-use classification: no data\n';
+                        confBreakdown += (!isRuleBased) ? '✅ AI analysis: +20%' : '❌ AI analysis: failed';
+
+                        let displayStr = isRuleBased ? '(N/A)' : `(${confScore}%)`;
+                        confBadge.innerHTML = `Confidence: ${confLabel} <span title="${confBreakdown}" style="cursor:help; opacity:0.7; text-decoration:underline dotted;">${displayStr}</span>`;
                         confBadge.style.color = confColor;
 
                         // Set basis label
@@ -1833,8 +1836,8 @@
                 <div
                     style="margin-bottom:20px; padding:12px; background:rgba(0,0,0,0.3); border-radius:8px; border-left:3px solid var(--leaf-500);">
                     <strong style="color:var(--leaf-300);">Step 1: Region Selection</strong><br>
-                    User draws a polygon on Google Satellite imagery via Leaflet.js. GeoJSON coordinates extracted for
-                    downstream analysis.
+                    User draws a polygon on Esri satellite imagery via Leaflet.js. GeoJSON coordinates extracted for
+                    downstream analysis. downstream analysis.
                 </div>
 
                 <div
@@ -1890,7 +1893,7 @@
                             style="font-size:9px; color:#555;">[Novel]</span></strong><br>
                     NDVI proxy is cross-referenced against <strong>real</strong> 14-day rainfall data from Open-Meteo to
                     contextualize vegetation status. Temporal change detection uses a deterministic estimate (not real
-                    historical imagery — requires Sentinel Hub API credentials for actual time series).
+                    historical imagery).
                 </div>
             </div>
         </div>

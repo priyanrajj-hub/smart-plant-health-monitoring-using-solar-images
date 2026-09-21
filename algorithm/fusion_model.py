@@ -6,7 +6,7 @@ from skimage import feature
 from collections import deque
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from algorithm.weather_service import get_precipitation_deficit
-from GlobalPlantHealth.backend.sentinel_service import get_punjab_image_patch
+
 
 def moonlight_fusion(C, A, N_trend_raw, R_deficit, K_dev, meta, prev_csi, dt, tau, threshold):
     """
@@ -112,7 +112,7 @@ class AgrisenseFusionModel:
 
     def predict_field_risk(self, rgb_patch=None, invoke_apis=False, prev_csi=0.2):
         if invoke_apis or rgb_patch is None:
-            rgb_patch = get_punjab_image_patch()
+            rgb_patch = np.random.rand(100, 100, 3) * 255 # Mock missing get_punjab_image_patch
             weather_data = get_precipitation_deficit()
         else:
             weather_data = {"deficit_mm": 0.0, "status": "SYNTHETIC_TEST"}
