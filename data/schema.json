@@ -1,0 +1,160 @@
+{
+    "places": {
+        "columns": {
+            "place_id": {
+                "type": "string"
+            },
+            "place_name": {
+                "type": "string"
+            },
+            "country": {
+                "type": "string"
+            },
+            "state": {
+                "type": "string"
+            },
+            "district": {
+                "type": "string"
+            },
+            "centroid_lat": {
+                "type": "float",
+                "min": -90.0,
+                "max": 90.0
+            },
+            "centroid_lon": {
+                "type": "float",
+                "min": -180.0,
+                "max": 180.0
+            },
+            "polygon_geojson": {
+                "type": "string"
+            },
+            "area_hectares": {
+                "type": "float"
+            },
+            "elevation_m": {
+                "type": "float"
+            },
+            "geohash7": {
+                "type": "string"
+            },
+            "first_visit_utc": {
+                "type": "datetime"
+            },
+            "last_visit_utc": {
+                "type": "datetime"
+            },
+            "visit_count": {
+                "type": "integer"
+            },
+            "user_declared_land_use": {
+                "type": "string"
+            },
+            "user_declared_crop": {
+                "type": "string",
+                "nullable": true
+            },
+            "notes": {
+                "type": "string",
+                "nullable": true
+            }
+        },
+        "primary_key": [
+            "place_id"
+        ]
+    },
+    "visits": {
+        "columns": {
+            "visit_id": {
+                "type": "string"
+            },
+            "place_id": {
+                "type": "string"
+            },
+            "visit_timestamp_utc": {
+                "type": "datetime"
+            },
+            "local_date": {
+                "type": "string"
+            },
+            "local_time": {
+                "type": "string"
+            },
+            "timezone": {
+                "type": "string"
+            },
+            "day_of_year": {
+                "type": "integer"
+            },
+            "season": {
+                "type": "string"
+            },
+            "visit_number_for_place": {
+                "type": "integer"
+            },
+            "days_since_previous_visit": {
+                "type": "float"
+            },
+            "user_id_hash": {
+                "type": "string"
+            },
+            "app_version": {
+                "type": "string"
+            },
+            "device_type": {
+                "type": "string"
+            }
+        },
+        "primary_key": [
+            "visit_id"
+        ]
+    },
+    "satellite_observations": {
+        "columns": {
+            "obs_id": {
+                "type": "string"
+            },
+            "visit_id": {
+                "type": "string"
+            },
+            "place_id": {
+                "type": "string"
+            },
+            "scene_id": {
+                "type": "string"
+            },
+            "scene_date": {
+                "type": "datetime"
+            },
+            "days_since_scene": {
+                "type": "integer"
+            },
+            "cloud_pct_polygon": {
+                "type": "float",
+                "min": 0,
+                "max": 100
+            },
+            "valid_pixel_pct": {
+                "type": "float",
+                "min": 0,
+                "max": 100
+            },
+            "ndvi": {
+                "type": "float",
+                "min": -1.0,
+                "max": 1.0
+            },
+            "provenance": {
+                "type": "string",
+                "allowed": [
+                    "measured_sentinel",
+                    "simulated",
+                    "llm_estimate"
+                ]
+            }
+        },
+        "primary_key": [
+            "obs_id"
+        ]
+    }
+}

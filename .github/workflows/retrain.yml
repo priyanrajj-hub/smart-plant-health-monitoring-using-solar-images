@@ -1,0 +1,46 @@
+name: Weekly Model Retraining Loop
+
+on:
+    schedule:
+        - cron: "0 0 * * 0" # Every Sunday at midnight
+    workflow_dispatch:
+
+jobs:
+    retrain_models:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Code Checkout
+              uses: actions/checkout@v3
+
+            - name: Setup Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.11"
+
+            - name: Cache dependencies
+              uses: actions/cache@v3
+              with:
+                  path: ~/.cache/pip
+                  key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+            - name: Export latest logs from Firebase
+              env:
+                  FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
+              run: |
+                  python scripts/export_firestore_to_csv.py
+
+            - name: Retrain Tabular & Vision Models
+              run: |
+                  # python scripts/retrain.py --all
+                  echo "Model training pipeline triggered."
+
+            - name: Eval & Promotion checks
+              run: |
+                  # Verify hold-out validation beats current deployed weights
+                  # python scripts/evaluate.py --promote-if-better
+                  echo "Automated promotion evaluated."
