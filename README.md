@@ -2,7 +2,7 @@
 
 *(Hardware platform: AGRISENSE)*
 
-[Live Demo](https://smart-plant-health-monitoring-using-solar-images-82n-8ca4j55i0.vercel.app/)
+[Live Demo](https://smart-plant-health-monitoring-using-solar-images-82n-7gkgfmu7i.vercel.app)
 
 Canopy is a scalable platform merging hardware telemetry with global satellite imagery to provide continuous, real-time vegetation health monitoring for precision agriculture.
 
