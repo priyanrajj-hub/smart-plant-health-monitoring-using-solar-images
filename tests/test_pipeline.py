@@ -100,3 +100,42 @@ def test_spatial_leakage_groups():
     
     # Must have absolute zero intersection (no leakage)
     assert len(train_places.intersection(val_places)) == 0, "Spatial groups leaked across splits!"
+
+# --- 6. Pipeline Source Honesty Check ---
+def test_ui_honesty():
+    """Verify that index.html and api/ do NOT contain forbidden simulation fallbacks."""
+    import os
+    index_path = "index.html"
+    assert os.path.exists(index_path)
+    with open(index_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Constraints (Should cause errors if found)
+    assert "Math.random" not in content, "Simulated variance (Math.random) found in index.html!"
+    assert "C_t = 0.4" not in content and "A_t = 0.2" not in content, "Hardcoded sensor proxies found!"
+    assert "Confidence: 100%" not in content and "Confidence: 98%" not in content, "Static high-confidence markers displayed without a model!"
+    
+    import re
+    # Match any confidence printed as a digit percentage, e.g. "Confidence: 85%"
+    confidence_fake = re.search(r"Confidence:\s*\d+%", content)
+    assert not confidence_fake, f"Confidence displayed as percentage without active model: {confidence_fake}"
+    
+    # Must use authentic telemetry rendering strings
+    assert "NOT CALIBRATED" in content or "NOT CONNECTED" in content, "Missing 'NOT CALIBRATED' or 'NOT CONNECTED' defensive UI wrappers."
+    
+    # Prevent LIVE badge overclaim
+    # If the badge is hardcoded as 'LIVE' without a WS connection, it's fake.
+    # Instead it should be dynamically assigned or fallback to 'OSINT'.
+    assert 'class="badge live-badge"' not in content, "Hardcoded LIVE badge exists over OSINT fallback!"
+    assert 'textContent = "LIVE"' not in content, "Dynamic LIVE badge assignment exists over OSINT fallback!"
+    
+    # Prevent hardcoded fallback charts
+    fallback_array = re.search(r"data:\s*\[\s*\d+\.\d+.*\]", content)
+    assert not fallback_array, "Hardcoded pseudo-data chart arrays detected!"
+
+    api_path = "api/gemini/index.js"
+    if os.path.exists(api_path):
+        with open(api_path, "r", encoding="utf-8") as f:
+            api_content = f.read()
+        assert "Math.random" not in api_content, "Mock randomizer found in API proxy!"
+

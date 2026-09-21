@@ -1253,6 +1253,7 @@
                                         insight = `
                                             <div style="margin-bottom:12px; line-height:1.4;">${j.summary || 'Summary unavailable.'}</div>
                                             
+                                            <div class="glass-panel" style="padding: 10px 20px; font-weight: bold; border-left: 4px solid var(--accent);">OSINT TELEMETRY</div>
                                             <div style="color:var(--leaf-500); font-weight:bold; font-size:12px; border-bottom:1px solid #333; padding-bottom:6px; margin-bottom:8px; margin-top:15px; letter-spacing:1px;">
                                                 > FIELD RISK ESTIMATE
                                             </div>
@@ -1387,7 +1388,7 @@
                         document.getElementById('p-ndvi').textContent = typeof ndvi === 'number' ? ndvi.toFixed(3) : "No data";
                         document.getElementById('p-source').textContent = sourceString;
 
-                        // Render Live Weather Data & Compute Algorithmic Indices
+                        // Render OSINT Weather Data & Compute Algorithmic Indices
                         if (meteoData && meteoData.current) {
                             const t = meteoData.current.temperature_2m;
                             currentTemp = t;
@@ -1535,7 +1536,8 @@
                         // UPDATE DATA HONESTY BADGE
                         const badgeElem = document.getElementById("data-honesty-badge");
                         if (badgeElem) {
-                            badgeElem.textContent = "DATA SOURCE: HYBRID [LIVE API + PROXY]";
+                            badgeElem.className = "badge osint-badge";
+                            badgeElem.textContent = "OSINT API";
                             badgeElem.style.color = "var(--leaf-300)";
                             badgeElem.style.borderColor = "var(--leaf-300)";
                             badgeElem.style.background = "rgba(92, 138, 63, 0.1)";
