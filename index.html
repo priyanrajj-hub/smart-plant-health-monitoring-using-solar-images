@@ -1177,6 +1177,40 @@
                         // NOTE: Cloud cover detection requires satellite imagery API (Sentinel Hub / NASA Worldview).
                         // Without API credentials, cloud cover cannot be detected. This is noted in the methodology panel.
 
+                        if (meteoData && meteoData.current) {
+                            currentTemp = meteoData.current.temperature_2m;
+                        }
+                        if (rainData && rainData.daily && rainData.daily.precipitation_sum) {
+                            const rains = rainData.daily.precipitation_sum;
+                            const totalRain = rains.reduce((a, b) => a + (b || 0), 0);
+                            const avgRain = totalRain / rains.length;
+                            let seasonalNorm = 3.5;
+                            if (rainBaseline && rainBaseline.daily && rainBaseline.daily.precipitation_sum) {
+                                const baseRains = rainBaseline.daily.precipitation_sum;
+                                seasonalNorm = baseRains.reduce((a, b) => a + (b || 0), 0) / baseRains.length;
+                            }
+                            deficit = seasonalNorm > 0.01 ? ((1 - (avgRain / seasonalNorm)) * 100).toFixed(0) : 0;
+                        }
+
+                        // ---- MOONLIGHT FUSION [PROBABILISTIC WEIGHTED] ----
+                        const C_t = 0.4; // Capacitive proxy
+                        const A_t = 0.2; // Acoustic proxy
+                        const N_t = Math.max(0, 1 - (ndvi + 1) / 2); // NDVI anomaly proxy mapped 0-1
+                        const R_t = Math.max(0, parseInt(deficit || 0) / 100);
+                        const cloudFrac = Math.random() * 0.3; // Sentinel SCL proxy until backend wired
+                        const w_C = Math.max(0.1, 1 - Math.abs(currentTemp - 25) / 20);
+                        const w_A = 0.8; // Assume low noise test
+                        const w_N = Math.pow(1 - cloudFrac, 2);
+                        const w_R = 1.0; // Assume no irrigation flag today
+
+                        const sum_w = w_C + w_A + w_N + w_R;
+                        const csi_raw = (C_t * w_C + A_t * w_A + N_t * w_N + R_t * w_R) / (sum_w + 0.0001);
+                        const csi = csi_raw; // Simplified for stateless frontend demo
+
+                        const mean_w = sum_w / 4;
+                        const var_w = (Math.pow(w_C - mean_w, 2) + Math.pow(w_A - mean_w, 2) + Math.pow(w_N - mean_w, 2) + Math.pow(w_R - mean_w, 2)) / 4;
+                        const confidence = Math.max(w_C, w_A, w_N, w_R) / (var_w + 1);
+
                         // SERVERLESS GEMINI FETCH (Secure Edge Endpoint)
                         let insight = "Diagnostic unavailable. Check server connection.";
                         const geminiPayload = {
@@ -1518,30 +1552,7 @@
                         }
 
 
-                        // ---- MOONLIGHT FUSION [PROBABILISTIC WEIGHTED] ----
-
-                        // Raw normalized scores (Simulated/Proxy sources for hardware)
-                        const C_t = 0.4; // Capacitive proxy
-                        const A_t = 0.2; // Acoustic proxy
-                        const N_t = Math.max(0, 1 - (ndvi + 1) / 2); // NDVI anomaly proxy mapped 0-1
-                        const R_t = Math.max(0, parseInt(deficit || 0) / 100);
-
-                        // Metadata for reliability weighting
-                        const cloudFrac = Math.random() * 0.3; // Sentinel SCL proxy until backend wired
-
-                        const w_C = Math.max(0.1, 1 - Math.abs(currentTemp - 25) / 20);
-                        const w_A = 0.8; // Assume low noise test
-                        const w_N = Math.pow(1 - cloudFrac, 2);
-                        const w_R = 1.0; // Assume no irrigation flag today
-
-                        const sum_w = w_C + w_A + w_N + w_R;
-                        const csi_raw = (C_t * w_C + A_t * w_A + N_t * w_N + R_t * w_R) / (sum_w + 0.0001);
-
-                        const csi = csi_raw; // Simplified for stateless frontend demo
-
-                        const mean_w = sum_w / 4;
-                        const var_w = (Math.pow(w_C - mean_w, 2) + Math.pow(w_A - mean_w, 2) + Math.pow(w_N - mean_w, 2) + Math.pow(w_R - mean_w, 2)) / 4;
-                        const confidence = Math.max(w_C, w_A, w_N, w_R) / (var_w + 1);
+                        // Moonlight Fusion block hosted upwards.
 
                         // Lead time linear extrapolation (Est)
                         const threshold = 0.7;
