@@ -15,48 +15,60 @@ def retrain_models(train_all=False, tabular_only=False, image_only=False):
         
     print("STATUS: Checking for new telemetry configurations in data/...")
     
+    trained_tabular = False
+    trained_vision = False
+    import_error = False
+    data_starvation = False
+
     if train_all or tabular_only:
         print("[1/2] Launching LightGBM Tabular Stress and NPK Estimators...")
         try:
             from ml.models.stress_tabular import StressSeverityModel
-            # Generate synthetic physical ground-truth conforming to constraints to jumpstart continuous testing
-            print("      Constructing validated training matrices respecting 'provenance' rules...")
-            dummy_df = pd.DataFrame({
-                'place_id': np.random.randint(1, 10, 100),
-                'ndvi_anomaly': np.random.rand(100),
-                'cum_heat_stress_7d': np.random.rand(100) * 100,
-                'days_since_rain': np.random.randint(0, 30, 100),
-                'elevation_m': np.random.randint(100, 1000, 100),
-                'stress_severity': np.random.randint(0, 4, 100),
-                'provenance': ['measured_sentinel'] * 100
-            })
-            model = StressSeverityModel()
-            success = model.train(dummy_df)
-            if success:
-                print("      Tabular Models successfully loaded and re-fitted. Updated weights persisted to .cache/models/tabular_vlatest.pkl")
+            real_df = pd.DataFrame(columns=['place_id', 'ndvi_anomaly', 'cum_heat_stress_7d', 'days_since_rain', 'elevation_m', 'stress_severity', 'provenance'])
+            
+            if len(real_df) < 50:
+                print("      ERROR: Insufficient tabular data (<50 samples) to train Stress Model. Abstaining.")
+                data_starvation = True
             else:
-                print("      Error during Tabular training sequence.")
+                model = StressSeverityModel()
+                success = model.train(real_df)
+                if success:
+                    print("      Tabular Models successfully loaded and re-fitted. Updated weights persisted to .cache/models/tabular_vlatest.pkl")
+                    trained_tabular = True
+                else:
+                    print("      Error during Tabular training sequence.")
         except ImportError as e:
             print(f"      ERROR: Tabular module imports failed: {e}")
+            import_error = True
             
     if train_all or image_only:
         print("[2/2] Launching PyTorch EfficientNet Vision Classifier...")
         try:
             import torch
             from ml.models.leaf_image_cnn import CropDiseaseClassifier, train_model
-            model = CropDiseaseClassifier(num_classes=10)
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-            criterion = torch.nn.CrossEntropyLoss()
             
-            # Synthetic dataloader construct for automated testing loop guarantees
-            print("      Injecting 16x Image classification tensors for PyTorch epoch simulation...")
-            dummy_loader = [(torch.randn(4, 3, 224, 224), torch.randint(0, 10, (4,))) for _ in range(4)]
-            
-            trained_model = train_model(model, dummy_loader, optimizer, criterion, epochs=1)
-            print("      CNN Models successfully fine-tuned on new leaf observations. OOD validation enforced.")
+            real_images = []
+            if len(real_images) < 200:
+                print("      ERROR: Insufficient labeled data to train Vision Model (requires >= 200 samples). Abstaining.")
+                data_starvation = True
+            else:
+                model = CropDiseaseClassifier(num_classes=10)
+                optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+                criterion = torch.nn.CrossEntropyLoss()
+                trained_vision = True
         except ImportError as e:
             print(f"      ERROR: Vision module imports failed: {e}")
+            import_error = True
     
+    import sys
+    if import_error:
+        print("\nNO MODEL TRAINED: Execution halted due to missing dependencies.")
+        sys.exit(1)
+    
+    if data_starvation and not trained_tabular and not trained_vision:
+        print("\nNO MODEL TRAINED: Active learning abstained due to strict data threshold constraints.")
+        sys.exit(2)
+        
     print("\nTraining sweeps concluded successfully.")
     print("Run `python scripts/evaluate.py --promote-if-better` to process model promotions.")
 
