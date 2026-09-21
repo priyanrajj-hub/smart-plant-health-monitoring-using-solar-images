@@ -7,7 +7,7 @@ This document outlines the requisite steps, constraints, and statistical thresho
 **1. Simulated Data Dependencies**
 
 - **Prior State**: The UI dynamically rendered crop health indicators relying explicitly on deterministic heuristic matrices and mock random variances in `index.html`.
-- **Current Mitigation**: Strict provenance enforcements are now deployed across `ml/models`. No model will be permitted to train on labels explicitly tagged `simulated` or `llm_estimate`.
+- **Planned Mitigation**: Strict provenance enforcements are **planned to be deployed** across `ml/models`. No model will be permitted to train on labels explicitly tagged `simulated` or `llm_estimate`.
 
 **2. Satellite Processing Latency**
 
@@ -16,8 +16,8 @@ This document outlines the requisite steps, constraints, and statistical thresho
 
 ## Out-Of-Distribution (OOD) Guarding
 
-- **CNN Energy Scoring**: A deterministic Energy Score validation is wrapped around all image architectures (e.g. `CropDiseaseClassifier`). Field shots failing energy entropy thresholds will force an "Abstain" prediction rather than yielding aggressive false positives.
-- **Monotonic NPK Modeling**: Regression models attempting to extrapolate SoilGrids background distributions adhere strictly to monotonic gradient rules relative to verifiable topological covariates. An absolute `low_confidence` marker triggers if corresponding lab tags are missing.
+- **CNN Energy Scoring**: A deterministic Energy Score validation **is planned to wrap** around all image architectures (e.g. `CropDiseaseClassifier`). Field shots failing energy entropy thresholds will force an "Abstain" prediction rather than yielding aggressive false positives.
+- **Monotonic NPK Modeling**: Regression models attempting to extrapolate SoilGrids background distributions **are planned to adhere** strictly to monotonic gradient rules relative to verifiable topological covariates. An absolute `low_confidence` marker **will trigger** if corresponding lab tags are missing.
 
 ## Data Collection Plan - Reaching Confidence Baselines
 
@@ -33,4 +33,4 @@ To successfully bypass the `insufficient_evidence` catch blocks authored in the 
 A 3-month physical pilot across Amrita engineering facilities and adjacent agrarian parcels will validate the structural ML ingestion code developed in Phase 1-9:
 
 - **Weekly Collection**: Agronomists upload RGB images against specific polygons with validated disease notes manually into the UI panel.
-- **Syncing Loop**: `scripts/import_csv_to_firestore.py` caches the data locally where GitHub workflows recursively refine the `efficientnet_b0` weights.
+- **Syncing Loop**: `scripts/import_csv_to_firestore.py` caches the data locally where GitHub workflows **evaluate models on frozen test sets and promote them only if performance improves over current metrics.**

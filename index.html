@@ -929,7 +929,7 @@
                     try {
                         if (gem && data.integrations && data.integrations.gemini_api) {
                             if (data.integrations.gemini_api.configured) {
-                                gem.innerHTML = '&#9679; Gemini AI: Live';
+                                gem.innerHTML = '&#9679; Gemini AI: Backend Configured';
                                 gem.style.color = 'var(--leaf-300)';
                             } else {
                                 gem.innerHTML = '&#9679; Gemini AI: Fallback (Rules)';
@@ -1151,8 +1151,8 @@
                             rawApiDiv.textContent = JSON.stringify(rawPayload, null, 2);
                         }
 
-                        let currentTemp = 25; // fallback
-                        let deficit = 0; // fallback
+                        let currentTemp = "No data";
+                        let deficit = "No data";
 
                         // ALGORITHMIC NDVI CONSTRUCTION (OSINT Proxy)
                         let ndvi = 0.45; // Default safe rural
@@ -1165,9 +1165,10 @@
                             else if (activeTags.includes("highway") || activeTags.includes("road") || activeTags.includes("asphalt")) ndvi = 0.05;
                         }
 
-                        // Deterministic hash based on coords so same popup yields exact same UI state
-                        const pseudoVariance = (Math.abs(centerLng + centerLat) % 0.1) - 0.05;
-                        ndvi = Math.max(-1.0, Math.min(1.0, ndvi + pseudoVariance));
+                        // Removed pseudoVariance and deterministic hashing. Remaining purely honest.
+                        if (ndvi !== "No data" && typeof ndvi === 'number') {
+                            ndvi = Math.max(-1.0, Math.min(1.0, ndvi));
+                        }
 
                         // Warn user if polygon covers non-vegetation (built structures)
                         if (ndvi < 0.15) {
@@ -1193,23 +1194,11 @@
                         }
 
                         // ---- MOONLIGHT FUSION [PROBABILISTIC WEIGHTED] ----
-                        const C_t = 0.4; // Capacitive proxy
-                        const A_t = 0.2; // Acoustic proxy
-                        const N_t = Math.max(0, 1 - (ndvi + 1) / 2); // NDVI anomaly proxy mapped 0-1
-                        const R_t = Math.max(0, parseInt(deficit || 0) / 100);
-                        const cloudFrac = Math.random() * 0.3; // Sentinel SCL proxy until backend wired
-                        const w_C = Math.max(0.1, 1 - Math.abs(currentTemp - 25) / 20);
-                        const w_A = 0.8; // Assume low noise test
-                        const w_N = Math.pow(1 - cloudFrac, 2);
-                        const w_R = 1.0; // Assume no irrigation flag today
-
-                        const sum_w = w_C + w_A + w_N + w_R;
-                        const csi_raw = (C_t * w_C + A_t * w_A + N_t * w_N + R_t * w_R) / (sum_w + 0.0001);
-                        const csi = csi_raw; // Simplified for stateless frontend demo
-
-                        const mean_w = sum_w / 4;
-                        const var_w = (Math.pow(w_C - mean_w, 2) + Math.pow(w_A - mean_w, 2) + Math.pow(w_N - mean_w, 2) + Math.pow(w_R - mean_w, 2)) / 4;
-                        const confidence = Math.max(w_C, w_A, w_N, w_R) / (var_w + 1);
+                        const C_t = "Sensor Not Connected"; // Capacitive proxy
+                        const A_t = "Sensor Not Connected"; // Acoustic proxy
+                        const csi = 0.0;
+                        const csi_raw = 0.0;
+                        const confidence = "Not calibrated";
 
                         // SERVERLESS GEMINI FETCH (Secure Edge Endpoint)
                         let insight = "Diagnostic unavailable. Check server connection.";
@@ -1258,7 +1247,9 @@
                                         let cleanStr = rawString.replace(/^```(json)?/, '').replace(/```$/, '').trim();
                                         const j = JSON.parse(cleanStr);
 
-                                        const expText = `Analysis based on:\n- Computed NDVI: ${ndvi.toFixed(3)}\n- Temp: ${currentTemp}°C \n- Rainfall Deficit: ${deficit || 0}%\n- Fusion CSI (Stress Index): ${csi.toFixed(3)}\n- AI Confidence: ${(confidence * 100).toFixed(1)}%`;
+                                        const safeNdviVal = typeof ndvi === 'number' ? ndvi.toFixed(3) : 'No data';
+                                        const safeCsiVal = 'Not calibrated';
+                                        const expText = `Analysis based on:\n- Computed NDVI: ${safeNdviVal}\n- Temp: ${currentTemp}°C \n- Rainfall Deficit: ${deficit || 0}%\n- Fusion CSI (Stress Index): ${safeCsiVal}\n- AI Confidence: ${confidence}`;
 
                                         insight = `
                                             <div style="margin-bottom:12px; line-height:1.4;">${j.summary || 'Summary unavailable.'}</div>
@@ -1394,7 +1385,7 @@
                         const sourceString = `${rawDate.toISOString().split('T')[0]} (OSM land-use + Open-Meteo)`;
 
                         document.getElementById('p-region-name').textContent = "Parcel Analysis Complete";
-                        document.getElementById('p-ndvi').textContent = ndvi.toFixed(3);
+                        document.getElementById('p-ndvi').textContent = typeof ndvi === 'number' ? ndvi.toFixed(3) : "No data";
                         document.getElementById('p-source').textContent = sourceString;
 
                         // Render Live Weather Data & Compute Algorithmic Indices
@@ -1572,15 +1563,15 @@
                             }
                         };
 
-                        safetxt('p-ml-csi', csi.toFixed(3), csi > 0.4 ? '#ef4444' : csi > 0.2 ? '#eab308' : '#10b981');
-                        safetxt('p-ml-conf', (confidence * 100).toFixed(1) + "%");
-                        safetxt('ml-csi', csi.toFixed(3));
-                        safetxt('ml-confidence', (confidence * 100).toFixed(1) + "%");
-                        safetxt('ml-wc', w_C.toFixed(2));
-                        safetxt('ml-wa', w_A.toFixed(2));
-                        safetxt('ml-wn', w_N.toFixed(2));
-                        safetxt('ml-wr', w_R.toFixed(2));
-                        safetxt('ml-lead-time', lead_time_str);
+                        safetxt('p-ml-csi', "Not calibrated", '#8a7a63');
+                        safetxt('p-ml-conf', "Not calibrated");
+                        safetxt('ml-csi', "Not calibrated");
+                        safetxt('ml-confidence', "Not calibrated");
+                        safetxt('ml-wc', 'N/A');
+                        safetxt('ml-wa', 'N/A');
+                        safetxt('ml-wn', 'N/A');
+                        safetxt('ml-wr', 'N/A');
+                        safetxt('ml-lead-time', "ESTIMATED LEAD TIME TO THRESHOLD: Not calibrated");
 
                         const delta = csi_raw; // Keep variable for downstream logic
                         const clampedBaseline = Math.max(-1, Math.min(1, ndvi - 0.05)); // Fallback baseline proxy
@@ -1630,42 +1621,17 @@
                         console.log("SETTING_INSIGHT_TEXT =", insight);
                         document.getElementById('p-insight').innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(insight, { ALLOWED_TAGS: ['em', 'strong', 'span', 'br', 'div'], ALLOWED_ATTR: ['style'] }) : insight;
 
-                        // Dynamic confidence scoring based on data completeness
-                        const confBadge = document.getElementById('confidence-badge');
-                        let confScore = 0;
-                        let confFactors = 0;
-                        if (ndvi !== null && !isNaN(ndvi)) { confScore += 30; confFactors++; }
-                        if (meteoData && meteoData.current) { confScore += 30; confFactors++; }
-                        if (oData && oData.elements && oData.elements.length > 0) { confScore += 20; confFactors++; }
-                        if (insight && !insight.includes('unavailable')) { confScore += 20; confFactors++; }
-
-                        let confLabel = 'LOW';
-                        let confColor = '#ef4444';
-                        let isRuleBased = insight && (insight.includes('unavailable') || insight.includes('Fallback logic'));
-
-                        if (isRuleBased) {
-                            confLabel = 'RULE-BASED';
-                            confColor = '#8a7a63'; // Neutral/fallback color
-                        } else if (confScore >= 80) {
-                            confLabel = 'HIGH'; confColor = '#10b981';
-                        } else if (confScore >= 50) {
-                            confLabel = 'MEDIUM'; confColor = '#eab308';
-                        }
+                        let confLabel = 'NOT CALIBRATED';
+                        let confColor = '#8a7a63';
 
                         confBadge.style.display = 'inline-block';
-                        let confBreakdown = 'Score Decomposition:\n';
-                        confBreakdown += (ndvi !== null && !isNaN(ndvi)) ? '✅ NDVI data: +30%\n' : '❌ NDVI data: missing\n';
-                        confBreakdown += (meteoData && meteoData.current) ? '✅ Weather telemetry: +30%\n' : '❌ Weather telemetry: missing\n';
-                        confBreakdown += (oData && oData.elements && oData.elements.length > 0) ? '✅ Land-use classification: +20%\n' : '❌ Land-use classification: no data\n';
-                        confBreakdown += (!isRuleBased) ? '✅ AI analysis: +20%' : '❌ AI analysis: failed';
-
-                        let displayStr = isRuleBased ? '(N/A)' : `(${confScore}%)`;
-                        confBadge.innerHTML = `Confidence: ${confLabel} <span title="${confBreakdown}" style="cursor:help; opacity:0.7; text-decoration:underline dotted;">${displayStr}</span>`;
+                        confBadge.innerHTML = `Confidence: ${confLabel}`;
                         confBadge.style.color = confColor;
 
                         // Set basis label
+                        const safeNdviDisplay = typeof ndvi === 'number' ? ndvi.toFixed(3) : 'No data';
                         const basisEl = document.getElementById('p-insight-basis');
-                        if (basisEl) basisEl.textContent = '*Basis: OSINT NDVI proxy (' + ndvi.toFixed(3) + ') + Open-Meteo live telemetry';
+                        if (basisEl) basisEl.textContent = '*Basis: OSINT NDVI proxy (' + safeNdviDisplay + ') + Open-Meteo live telemetry';
 
                         renderChart(ndvi);
                     } catch (err) {
