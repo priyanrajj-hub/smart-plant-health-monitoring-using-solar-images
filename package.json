@@ -1,7 +1,7 @@
 {
   "name": "smart-plant-health-monitoring-using-solar-images",
   "version": "1.0.0",
-  "description": "[![Vercel Deploy](https://img.shields.io/badge/Vercel-Deployed-success)](https://smart-plant-health-monitoring-using-solar-images.vercel.app/)\r [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)",
+  "description": "[![Vercel Deploy](https://img.shields.io/badge/Vercel-Deployed-success)](https://smart-plant-health-monitoring-using-solar-images-82n-8ca4j55i0.vercel.app/)\r [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)",
   "main": "index.js",
   "directories": {
     "doc": "docs"
