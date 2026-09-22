@@ -13,6 +13,8 @@
 
     <!-- Intercept and suppress specific Three.js globe.gl deprecation warning -->
     <script>
+function safetxt(id, txt, color) { const e = document.getElementById(id); if (e) { e.textContent = txt; if (color) e.style.color = color; } }
+
         document.addEventListener("webglcontextlost", function (e) {
             e.preventDefault();
             console.warn("WebGL Context Lost handled document-wide. UI marker displayed.");
@@ -1612,7 +1614,7 @@
                         }
 
                         // Safely apply MOONLIGHT texts to ALL instances (both main HUD and temporal panel if present)
-                        const safetxt = (id, txt, color) => {
+                        /* removed */ {
                             const e = document.getElementById(id);
                             if (e) {
                                 e.textContent = txt;
