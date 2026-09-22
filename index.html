@@ -1067,12 +1067,12 @@
                     }
 
                     document.getElementById('panel').classList.add('open');
-                    document.getElementById('p-coords').textContent = `Center Approx: ${coords[0][1].toFixed(4)}, ${coords[0][0].toFixed(4)}`;
-                    document.getElementById('p-region-name').textContent = "Analyzing Geometry...";
+                    safetxt('p-coords', `Center Approx: ${coords[0][1].toFixed(4)}, ${coords[0][0].toFixed(4)}`);
+                    safetxt('p-region-name', "Analyzing Geometry...");
 
                     const badge = document.getElementById('p-badge');
                     badge.className = 'health-badge loading-skeleton';
-                    document.getElementById('p-badge-text').textContent = "Fetching Live Data...";
+                    safetxt('p-badge-text', "Fetching Live Data...");
                     const skeleton = '<span class="loading-skeleton" style="width:50px;height:12px;display:inline-block;border-radius:4px;"></span>';
                     ['p-ndvi', 'p-temp', 'p-sun', 'p-uv', 'p-humidity', 'p-source'].forEach(id => {
                         let el = document.getElementById(id);
@@ -1423,7 +1423,7 @@
                             insight = `AI insight unavailable. Showing rule-based data only: Computed NDVI of ${safeNdvi} indicates vegetation health is ${healthVerdict}. ` +
                                 `<em style="font-size:11px; color:#8a7a63;">[Source: ${sourceStr}]</em>`;
 
-                            document.getElementById('p-error').textContent = '';
+                            safetxt('p-error', '');
                         }
                         clearInterval(aiTimerInterval);
 
@@ -1436,9 +1436,9 @@
                         const rawDate = new Date();
                         const sourceString = `${rawDate.toISOString().split('T')[0]} (OSM land-use + Open-Meteo)`;
 
-                        document.getElementById('p-region-name').textContent = "Parcel Analysis Complete";
-                        document.getElementById('p-ndvi').textContent = typeof ndvi === 'number' ? ndvi.toFixed(3) : "No data";
-                        document.getElementById('p-source').textContent = sourceString;
+                        safetxt('p-region-name', 'Parcel Analysis Complete');
+                        safetxt('p-ndvi', typeof ndvi === 'number' ? ndvi.toFixed(3) : 'No data');
+                        safetxt('p-source', sourceString);
 
                         // Render OSINT Weather Data & Compute Algorithmic Indices
                         if (meteoData && meteoData.current) {
@@ -1446,8 +1446,8 @@
                             currentTemp = t;
                             const h = meteoData.current.relative_humidity_2m;
 
-                            document.getElementById('p-temp').textContent = `${t}°C`;
-                            document.getElementById('p-humidity').textContent = `${h}%`;
+                            safetxt('p-temp', `${t}°C`);
+                            safetxt('p-humidity', `${h}%`);
                             // Update hardware UI panel explicitly using conditional rendering for missing datastreams
                             const cElem = document.getElementById('p-capacitance');
                             if (cElem) cElem.textContent = c_t === null ? "Not Connected" : `${c_t} pF`;
@@ -1457,14 +1457,14 @@
 
                             if (meteoData.daily && meteoData.daily.sunshine_duration) {
                                 const sunHours = (meteoData.daily.sunshine_duration[0] / 3600).toFixed(1);
-                                document.getElementById('p-sun').textContent = `${sunHours} Hours`;
-                                document.getElementById('p-uv').textContent = meteoData.daily.uv_index_max[0];
+                                safetxt('p-sun', `${sunHours} Hours`);
+                                safetxt('p-uv', meteoData.daily.uv_index_max[0]);
                             }
                         } else {
-                            document.getElementById('p-temp').textContent = 'Unavailable';
-                            document.getElementById('p-humidity').textContent = 'Unavailable';
-                            document.getElementById('p-sun').textContent = 'Unavailable';
-                            document.getElementById('p-uv').textContent = 'Unavailable';
+                            safetxt('p-temp', 'Unavailable');
+                            safetxt('p-humidity', 'Unavailable');
+                            safetxt('p-sun', 'Unavailable');
+                            safetxt('p-uv', 'Unavailable');
                         }
 
                         // --- POLYGON SPATIAL METRICS & CROP CONTEXT ---
@@ -1570,7 +1570,7 @@
                             }
                             deficit = seasonalNorm > 0.01 ? ((1 - (avgRain / seasonalNorm)) * 100).toFixed(0) : 0;
 
-                            document.getElementById('p-rainfall').textContent = totalRain + ' mm';
+                            safetxt('p-rainfall', totalRain + ' mm');
                             document.getElementById('p-rain-deficit').textContent = (deficit > 0 ? deficit + '% below ' : Math.abs(deficit) + '% above ') + normSource;
                             document.getElementById('rainfall-panel').style.display = 'block';
 
@@ -1674,7 +1674,7 @@
                         }
 
                         badge.className = `health-badge ${statusPhase}`;
-                        document.getElementById('p-badge-text').textContent = statusPhase.toUpperCase();
+                        safetxt('p-badge-text', statusPhase.toUpperCase());
 
                         layer.setStyle({ fillColor: statusColor, color: statusColor, fillOpacity: 0.5 });
                         console.log("SETTING_INSIGHT_TEXT =", insight);
