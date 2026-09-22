@@ -13,6 +13,8 @@
 
     <!-- Intercept and suppress specific Three.js globe.gl deprecation warning -->
     <script>
+        function safetxt(id, txt, color) { const e = document.getElementById(id); if (e) { e.textContent = txt; if (color) e.style.color = color; } }
+
         document.addEventListener("webglcontextlost", function (e) {
             e.preventDefault();
             console.warn("WebGL Context Lost handled document-wide. UI marker displayed.");
@@ -862,9 +864,11 @@
                 <span class="metric-value" style="font-size:13px;" id="p-rainfall">—</span>
             </div>
             <div class="metric-row">
-                <span class="metric-label">Rain Deficit <span
-                        style="font-size:9px; color:#555;">[Computed]</span></span>
-                <span class="metric-value" style="font-size:13px;" id="p-rain-deficit">—</span>
+                <span class="metric-label">Rain Deficit <span <div
+                        style="font-size: 16px; font-weight: 200; letter-spacing: 2px;">
+                        <span id="p-region-name" style="color:var(--text-main);">Canopy</span>
+                        <span id="save-status"
+                            style="margin-left: 10px; font-size: 11px; color: #a1a1aa; font-weight: normal;"></span>
             </div>
             <div id="ndvi-rain-fusion"
                 style="font-family:var(--mono); font-size:10px; color:#aaa; margin-top:6px; padding:6px; background:rgba(0,0,0,0.2); border-radius:4px; display:none;">
@@ -1199,6 +1203,54 @@
                         const csi = 0.0;
                         const csi_raw = 0.0;
                         const confidence = "Not calibrated";
+
+                        // INDEPENDENT POSTGRES TELEMETRY PIPELINE
+                        const logTelemetry = async () => {
+                            try {
+                                const polyData = {
+                                    polygon_geojson: polygonGeoJSON,
+                                    centroid_lat: lat,
+                                    centroid_lon: lng,
+                                    area_hectares: area_hectares,
+                                    ndvi: typeof ndvi === 'number' ? ndvi : null,
+                                    ndvi_source: "osint_proxy",
+                                    weather: meteoData && meteoData.current ? {
+                                        temperature_c: meteoData.current.temperature_2m,
+                                        humidity_pct: meteoData.current.relative_humidity_2m,
+                                        source: "open_meteo_live"
+                                    } : null
+                                };
+                                const statusSpan = document.getElementById('save-status');
+                                if (statusSpan) {
+                                    statusSpan.style.color = '#a1a1aa';
+                                    statusSpan.textContent = "Saving to Neon...";
+                                }
+
+                                const saveRes = await fetch('/api/log-visit', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(polyData)
+                                });
+                                const saveData = await saveRes.json();
+
+                                if (statusSpan) {
+                                    if (saveData.success) {
+                                        statusSpan.style.color = 'var(--leaf-500)';
+                                        statusSpan.textContent = `✓ Visit #${saveData.visit_count} Saved`;
+                                    } else {
+                                        statusSpan.style.color = '#ef4444';
+                                        statusSpan.textContent = `⚠ ${saveData.error || 'DB save failed'}`;
+                                    }
+                                }
+                            } catch (e) {
+                                const statusSpan = document.getElementById('save-status');
+                                if (statusSpan) {
+                                    statusSpan.style.color = '#ef4444';
+                                    statusSpan.textContent = `⚠ Neon DB Offline`;
+                                }
+                            }
+                        };
+                        logTelemetry(); // Run entirely in parallel to Gemini
 
                         // SERVERLESS GEMINI FETCH (Secure Edge Endpoint)
                         let insight = "Diagnostic unavailable. Check server connection.";
@@ -1562,7 +1614,7 @@
                         }
 
                         // Safely apply MOONLIGHT texts to ALL instances (both main HUD and temporal panel if present)
-                        const safetxt = (id, txt, color) => {
+                        /* removed */ {
                             const e = document.getElementById(id);
                             if (e) {
                                 e.textContent = txt;
@@ -1637,8 +1689,7 @@
 
                         // Set basis label
                         const safeNdviDisplay = typeof ndvi === 'number' ? ndvi.toFixed(3) : 'No data';
-                        const basisEl = document.getElementById('p-insight-basis');
-                        if (basisEl) basisEl.textContent = '*Basis: OSINT NDVI proxy (' + safeNdviDisplay + ') + Open-Meteo live telemetry';
+                        safetxt('p-insight-basis', '*Basis: OSINT NDVI proxy (' + safeNdviDisplay + ') + Open-Meteo live telemetry');
 
                         renderChart([]);
                     } catch (err) {
@@ -1647,12 +1698,12 @@
                         // Don't overwrite the entire status panel if partial data loaded successfully.
                         const nameEl = document.getElementById('p-region-name');
                         if (nameEl && nameEl.textContent.includes("Analyzing")) {
-                            nameEl.textContent = "Analysis Incomplete";
+                            safetxt('p-region-name', "Analysis Incomplete");
                             badge.className = 'health-badge';
-                            document.getElementById('p-badge-text').textContent = "Partial Data";
+                            safetxt('p-badge-text', "Partial Data");
                         }
                         const errElem = document.getElementById('p-error');
-                        if (errElem) errElem.textContent = "Component Error: " + err.message;
+                        if (errElem) safetxt('p-error', "Component Error: " + err.message);
                     }
                 });
             } else {
