@@ -13,7 +13,7 @@
 
     <!-- Intercept and suppress specific Three.js globe.gl deprecation warning -->
     <script>
-function safetxt(id, txt, color) { const e = document.getElementById(id); if (e) { e.textContent = txt; if (color) e.style.color = color; } }
+        function safetxt(id, txt, color) { const e = document.getElementById(id); if (e) { e.textContent = txt; if (color) e.style.color = color; } }
 
         document.addEventListener("webglcontextlost", function (e) {
             e.preventDefault();
@@ -1689,8 +1689,7 @@ function safetxt(id, txt, color) { const e = document.getElementById(id); if (e)
 
                         // Set basis label
                         const safeNdviDisplay = typeof ndvi === 'number' ? ndvi.toFixed(3) : 'No data';
-                        const basisEl = document.getElementById('p-insight-basis');
-                        if (basisEl) basisEl.textContent = '*Basis: OSINT NDVI proxy (' + safeNdviDisplay + ') + Open-Meteo live telemetry';
+                        safetxt('p-insight-basis', '*Basis: OSINT NDVI proxy (' + safeNdviDisplay + ') + Open-Meteo live telemetry');
 
                         renderChart([]);
                     } catch (err) {
@@ -1699,12 +1698,12 @@ function safetxt(id, txt, color) { const e = document.getElementById(id); if (e)
                         // Don't overwrite the entire status panel if partial data loaded successfully.
                         const nameEl = document.getElementById('p-region-name');
                         if (nameEl && nameEl.textContent.includes("Analyzing")) {
-                            nameEl.textContent = "Analysis Incomplete";
+                            safetxt('p-region-name', "Analysis Incomplete");
                             badge.className = 'health-badge';
-                            document.getElementById('p-badge-text').textContent = "Partial Data";
+                            safetxt('p-badge-text', "Partial Data");
                         }
                         const errElem = document.getElementById('p-error');
-                        if (errElem) errElem.textContent = "Component Error: " + err.message;
+                        if (errElem) safetxt('p-error', "Component Error: " + err.message);
                     }
                 });
             } else {
