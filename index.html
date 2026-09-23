@@ -13,7 +13,13 @@
 
     <!-- Intercept and suppress specific Three.js globe.gl deprecation warning -->
     <script>
-        function safetxt(id, txt, color) { const e = document.getElementById(id); if (e) { e.textContent = txt; if (color) e.style.color = color; } }
+        function safetxt(id, text, color) {
+            let el = document.getElementById(id);
+            if (el) {
+                el.textContent = text;
+                if (color) el.style.color = color;
+            }
+        }
 
         document.addEventListener("webglcontextlost", function (e) {
             e.preventDefault();
@@ -44,7 +50,7 @@
             const panel = document.getElementById('panel');
             if (panel) {
                 panel.classList.add('open');
-                document.getElementById('p-region-name').textContent = "Application Error";
+                CanopyAI.setText('p-region-name', "Application Error");
                 document.getElementById('p-error').innerHTML = `Something went wrong loading this view.<br><button onclick="window.location.reload()" style="margin-top:12px; padding:6px 12px; background:var(--stress-500); color:white; font-family:var(--mono); border:none; border-radius:4px; cursor:pointer;">RETRY</button>`;
                 const badge = document.getElementById('p-badge');
                 if (badge) badge.style.display = 'none';
@@ -933,7 +939,7 @@
                     try {
                         if (gem && data.integrations && data.integrations.gemini_api) {
                             if (data.integrations.gemini_api.configured) {
-                                gem.innerHTML = '&#9679; Gemini AI: Backend Configured';
+                                gem.innerHTML = '&#9679; Gemini AI: Live';
                                 gem.style.color = 'var(--leaf-300)';
                             } else {
                                 gem.innerHTML = '&#9679; Gemini AI: Fallback (Rules)';
@@ -1087,7 +1093,7 @@
                         const timerSpan = document.getElementById('ai-timer');
                         if (timerSpan) timerSpan.innerText = aiTimerSecs;
                     }, 1000);
-                    document.getElementById('p-error').textContent = "";
+                    CanopyAI.setText('p-error', "");
                     const _cb = document.getElementById('confidence-badge');
                     if (_cb) _cb.style.display = 'none';
                     const _basis = document.getElementById('p-insight-basis');
@@ -1252,180 +1258,9 @@
                         };
                         logTelemetry(); // Run entirely in parallel to Gemini
 
-                        // SERVERLESS GEMINI FETCH (Secure Edge Endpoint)
-                        let insight = "Diagnostic unavailable. Check server connection.";
-                        const geminiPayload = {
-                            "contents": [{
-                                "parts": [{
-                                    "text": `You are the Canopy AI Agricultural Analyst. I just scanned a farm polygon using OSINT proxies. The Mean NDVI is ${ndvi.toFixed(3)}. Return your analysis STRICTLY as a JSON object with the following exact keys, and DO NOT wrap it in markdown code blocks:
-{
-  "summary": "one sentence overview of overall crop canopy health",
-  "stress_severity": "Low | Moderate | High | Critical",
-  "disease_risk_assessment": "estimated disease risk level based on environmental factors (e.g., fungal risk under high humidity) - Do not act as a diagnosis",
-  "pest_risk_assessment": "estimated pest pressure level based on environment - Do not act as a diagnosis",
-  "nutrient_stress_risk": "estimated nutrient stress risk level - Do not predict exact NPK values from NDVI alone",
-  "irrigation_recommendation": "estimated water need based on current NDVI, rainfall deficit, and temperature",
-  "climate_risk_flag": "flag drought/heat-wave/flood risk if current weather data crosses thresholds",
-  "confidence_caveat": "AI-estimated reasoning based on telemetry, not direct sensor measurement — requires ground validation"
-}` }]
-                            }]
-                        };
 
-                        try {
-                            console.log("[CANOPY AI INSIGHT] Initiating Gemini API fetch...", geminiPayload);
-                            const controller = new AbortController();
-                            const fetchTimeout = setTimeout(() => controller.abort(), 35000); // 35 seconds
 
-                            const gemRes = await fetch('/api/gemini', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(geminiPayload),
-                                signal: controller.signal
-                            });
 
-                            clearTimeout(fetchTimeout);
-
-                            if (gemRes.ok) {
-                                const gemData = await gemRes.json();
-                                console.log("[CANOPY AI INSIGHT] Successful response:", gemData);
-                                console.log("[CANOPY AI INSIGHT] RAW STRUCTURE:", JSON.stringify(gemData, null, 2));
-
-                                if (gemData && (gemData.text || gemData.candidates)) {
-                                    let rawString = gemData.text ? gemData.text : gemData.candidates[0].content.parts[0].text;
-                                    window._canopyDebug.geminiSuccess++;
-
-                                    try {
-                                        let cleanStr = rawString.replace(/^```(json)?/, '').replace(/```$/, '').trim();
-                                        const j = JSON.parse(cleanStr);
-
-                                        const safeNdviVal = typeof ndvi === 'number' ? ndvi.toFixed(3) : 'No data';
-                                        const safeCsiVal = 'Not calibrated';
-                                        const expText = `Analysis based on:\n- Computed NDVI: ${safeNdviVal}\n- Temp: ${currentTemp}°C \n- Rainfall Deficit: ${deficit || 0}%\n- Fusion CSI (Stress Index): ${safeCsiVal}\n- AI Confidence: ${confidence}`;
-
-                                        insight = `
-                                            <div style="margin-bottom:12px; line-height:1.4;">${j.summary || 'Summary unavailable.'}</div>
-                                            
-                                            <div class="glass-panel" style="padding: 10px 20px; font-weight: bold; border-left: 4px solid var(--accent);">OSINT TELEMETRY</div>
-                                            <div style="color:var(--leaf-500); font-weight:bold; font-size:12px; border-bottom:1px solid #333; padding-bottom:6px; margin-bottom:8px; margin-top:15px; letter-spacing:1px;">
-                                                > FIELD RISK ESTIMATE
-                                            </div>
-
-                                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:6px;">
-                                                <span style="color:#aaa; font-size:11px;">
-                                                    STRESS SEVERITY 
-                                                    <a href="javascript:void(0)" onclick="alert('${expText}')" style="color:#eab308; font-size:9px; text-decoration:none; margin-left:4px; padding:2px 4px; border:1px solid #eab308; border-radius:3px; background:rgba(234,179,8,0.1);">[Why?]</a>
-                                                </span>
-                                                <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.stress_severity || 'Unavailable'}</strong> 
-                                                    <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
-                                                </div>
-                                            </div>
-
-                                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:6px;">
-                                                <span style="color:#aaa; font-size:11px;">
-                                                    DISEASE RISK ASSESSMENT
-                                                </span>
-                                                <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.disease_risk_assessment || j.crop_disease_risk || j.disease_indicator || 'Unavailable'}</strong> 
-                                                    <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
-                                                </div>
-                                            </div>
-
-                                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:6px;">
-                                                <span style="color:#aaa; font-size:11px;">
-                                                    PEST RISK ASSESSMENT
-                                                </span>
-                                                <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.pest_risk_assessment || j.pest_risk || j.pest_pressure || 'Unavailable'}</strong> 
-                                                    <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
-                                                </div>
-                                            </div>
-
-                                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:6px;">
-                                                <span style="color:#aaa; font-size:11px;">
-                                                    NUTRIENT STRESS RISK
-                                                </span>
-                                                <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.nutrient_stress_risk || j.nutrient_deficiency_estimate || j.nutrient_status || 'Unavailable'}</strong> 
-                                                    <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:6px;">
-                                                <span style="color:#aaa; font-size:11px;">IRRIGATION RECOMMENDATION</span>
-                                                <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.irrigation_recommendation || 'Unavailable'}</strong>
-                                                    <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; margin-bottom:12px;">
-                                                <span style="color:#aaa; font-size:11px;">CLIMATE RISK FLAG</span>
-                                                <div style="text-align:right;">
-                                                    <strong style="color:var(--stress-300); font-size:12px;">${j.climate_risk_flag || 'Unavailable'}</strong> 
-                                                    <span style="font-size:9px; color:#8a7a63; display:block;">[AI Estimate]</span>
-                                                </div>
-                                            </div>
-
-                                            <div style="font-size:10px; color:#666; text-align:center; padding-top:6px; font-style:italic;">
-                                                ${j.confidence_caveat}
-                                            </div>
-                                        `;
-                                        console.log("SETTING_INSIGHT_TEXT =", "JSON Structure Parse Success!");
-                                    } catch (parseErr) {
-                                        console.error("[CANOPY AI INSIGHT] JSON Parse Error. Falling back to prose:", parseErr);
-                                        insight = rawString.replace(/<[^>]*>/g, '') + '<br><br><span style="font-size:10px; color:#8a7a63;">[AI Estimate - Failed to parse structured JSON]</span>';
-                                        console.log("SETTING_INSIGHT_TEXT =", insight);
-                                    }
-                                } else if (gemData.error) {
-                                    console.error("[CANOPY AI INSIGHT] API returned error block:", gemData.error);
-                                    insight = "AI insight unavailable — " + (gemData.error.message || "Unknown API error");
-                                    throw new Error(insight);
-                                } else {
-                                    const errMsg = "Cannot process response structure, expected 'text' parameter.";
-                                    console.error("[CANOPY AI INSIGHT] PARSING ERROR:", errMsg, "Raw data:", gemData);
-                                    throw new Error(errMsg);
-                                }
-                            } else {
-                                const errText = await gemRes.text();
-                                let explicitErrorMsg = `Server returned HTTP ${gemRes.status}`;
-                                try {
-                                    const errJson = JSON.parse(errText);
-                                    if (errJson.message && errJson.message.includes('API_KEY_SERVICE_BLOCKED')) {
-                                        explicitErrorMsg = "Gemini API Blocked! Go to Google Cloud Console > APIs & Services > Credentials, edit your API key, and check 'Generative Language API'.";
-                                        console.error(`[CANOPY] 🛑 ACTION REQUIRED: ${explicitErrorMsg}`);
-                                    } else {
-                                        explicitErrorMsg = errJson.error || explicitErrorMsg;
-                                        console.error(`[CANOPY AI INSIGHT] Server Error:`, errJson);
-                                    }
-                                } catch (e) {
-                                    console.error(`[CANOPY AI INSIGHT] HTTP Error ${gemRes.status}:`, errText);
-                                }
-                                throw new Error(explicitErrorMsg);
-                            }
-                        } catch (e) {
-                            const isTimeout = e.name === 'AbortError';
-                            console.warn("[CANOPY AI INSIGHT] Fallback triggered. Reason:", isTimeout ? 'Fetch timeout after 35s' : e.message);
-                            window._canopyDebug.geminiFallback++;
-
-                            // Use the locally computed ndvi (never null at this point)
-                            const safeNdvi = ndvi.toFixed(3);
-
-                            // Determine health status from real computed values
-                            let healthVerdict = "stable and within seasonal norms";
-                            if (ndvi >= 0.6) healthVerdict = "vigorous with strong chlorophyll activity";
-                            else if (ndvi >= 0.4) healthVerdict = "moderate with adequate vegetation cover";
-                            else if (ndvi >= 0.2) healthVerdict = "showing signs of stress — sparse canopy detected";
-                            else healthVerdict = "critically low — possible bare soil or severe degradation";
-
-                            const sourceStr = isTimeout ? "Fallback logic — timeout" : "Fallback logic — AI service error";
-
-                            insight = `AI insight unavailable. Showing rule-based data only: Computed NDVI of ${safeNdvi} indicates vegetation health is ${healthVerdict}. ` +
-                                `<em style="font-size:11px; color:#8a7a63;">[Source: ${sourceStr}]</em>`;
-
-                            safetxt('p-error', '');
-                        }
-                        clearInterval(aiTimerInterval);
 
 
                         let statusPhase = "healthy";
@@ -1530,7 +1365,7 @@
                                         <div style="display:flex; flex-direction:column; gap:4px;">
                                             <div><span id="inferred-crop-label" style="color:var(--leaf-300);">${inf.best_guess}</span> <span style="font-size:9px; color:#888;">(${inf.confidence}%)</span></div>
                                             
-                                            <select id="crop-correction-dropdown" name="crop-correction-dropdown" onchange="if(this.value === '___OTHER___') { document.getElementById('custom-crop-container').style.display = 'flex'; this.style.display = 'none'; } else { localStorage.setItem('${parcelKey}', this.value); document.getElementById('inferred-crop-label').textContent = this.value + ' (user-confirmed)'; this.style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: this.value, lat: ${centerLat}, lng: ${centerLng} }) }); }" 
+                                            <select id="crop-correction-dropdown" name="crop-correction-dropdown" onchange="if(this.value === '___OTHER___') { CanopyAI.setText('custom-crop-container').style.display = 'flex'; this.style.display = 'none'; } else { localStorage.setItem('${parcelKey}', this.value); document.getElementById('inferred-crop-label', this.value + ' (user-confirmed)'); this.style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: this.value, lat: ${centerLat}, lng: ${centerLng} }) }); }" 
                                                 style="background:transparent; color:#eab308; border:1px dashed #eab308; border-radius:3px; font-family:var(--mono); padding:2px; font-size:10px; cursor:pointer; max-width:180px; display:${dropdownDisplay};">
                                                 <option value="" disabled selected>Not sure? Correct it</option>
                                                 ${selectOptions}
@@ -1539,7 +1374,7 @@
                                             
                                             <div id="custom-crop-container" style="display:${customInputDisplay}; flex-direction:row; gap:4px;">
                                                 <input type="text" id="custom-crop-input" name="custom-crop-input" placeholder="Enter crop or tree name" style="background:rgba(0,0,0,0.4); color:white; border:1px solid #aaa; border-radius:3px; padding:4px 6px; font-family:var(--sans); font-size:11px; outline:none; max-width:140px;" />
-                                                <button onclick="const v = document.getElementById('custom-crop-input').value; if(v) { localStorage.setItem('${parcelKey}', v); document.getElementById('inferred-crop-label').textContent = v + ' (user-confirmed)'; document.getElementById('custom-crop-container').style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: v, manual: true, lat: ${centerLat}, lng: ${centerLng} }) }); }" style="background:var(--leaf-300); color:black; border:none; border-radius:3px; padding:4px 8px; font-size:11px; cursor:pointer;">Save</button>
+                                                <button onclick="const v = CanopyAI.setText('custom-crop-input').value; if(v) { localStorage.setItem('${parcelKey}', v); document.getElementById('inferred-crop-label', v + ' (user-confirmed)'); document.getElementById('custom-crop-container').style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: v, manual: true, lat: ${centerLat}, lng: ${centerLng} }) }); }" style="background:var(--leaf-300); color:black; border:none; border-radius:3px; padding:4px 8px; font-size:11px; cursor:pointer;">Save</button>
                                             </div>
                                         </div>
                                     `;
@@ -1571,7 +1406,7 @@
                             deficit = seasonalNorm > 0.01 ? ((1 - (avgRain / seasonalNorm)) * 100).toFixed(0) : 0;
 
                             safetxt('p-rainfall', totalRain + ' mm');
-                            document.getElementById('p-rain-deficit').textContent = (deficit > 0 ? deficit + '% below ' : Math.abs(deficit) + '% above ') + normSource;
+                            CanopyAI.setText('p-rain-deficit', (deficit > 0 ? deficit + '% below ' : Math.abs(deficit) + '% above ') + normSource);
                             document.getElementById('rainfall-panel').style.display = 'block';
 
                             // FUSION insight: cross-reference NDVI with rainfall
@@ -1678,7 +1513,23 @@
 
                         layer.setStyle({ fillColor: statusColor, color: statusColor, fillOpacity: 0.5 });
                         console.log("SETTING_INSIGHT_TEXT =", insight);
-                        document.getElementById('p-insight').innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(insight, { ALLOWED_TAGS: ['em', 'strong', 'span', 'br', 'div'], ALLOWED_ATTR: ['style'] }) : insight;
+                        // Canopy AI integration
+                        CanopyAI.run({
+                            lat: centerLat,
+                            lon: centerLng,
+                            ndvi: typeof ndvi === 'number' ? ndvi : null,
+                            temperature: typeof currentTemp !== 'undefined' ? currentTemp : null,
+                            sunlightHours: (typeof meteoData !== 'undefined' && meteoData && meteoData.daily && meteoData.daily.sunshine_duration) ? +(meteoData.daily.sunshine_duration[0] / 3600).toFixed(1) : null,
+                            uvIndex: (typeof meteoData !== 'undefined' && meteoData && meteoData.daily && meteoData.daily.uv_index_max) ? meteoData.daily.uv_index_max[0] : null,
+                            humidity: (typeof meteoData !== 'undefined' && meteoData && meteoData.current) ? meteoData.current.relative_humidity_2m : null,
+                            cropType: (typeof inf !== 'undefined' && inf && inf.best_guess) ? inf.best_guess : ((typeof savedCrop !== 'undefined' && savedCrop) ? savedCrop : 'Vegetation'),
+                            cropConfidence: (typeof inf !== 'undefined' && inf) ? inf.confidence : null,
+                            areaHa: typeof areaHa !== 'undefined' ? areaHa : null
+                        });
+
+                        // We also call init at start
+                        CanopyAI.init({ panel: "#p-insight" });
+
 
                         let confLabel = 'NOT CALIBRATED';
                         let confColor = '#8a7a63';
@@ -2008,7 +1859,7 @@
         function startWalkthrough() {
             _wtIndex = 0;
             document.getElementById('demoWalkthrough').style.display = 'block';
-            document.getElementById('walkthrough-step').textContent = _wtSteps[0].text;
+            CanopyAI.setText('walkthrough-step', _wtSteps[0].text);
         }
 
         function advanceWalkthrough() {
@@ -2019,12 +1870,13 @@
                 return;
             }
             const step = _wtSteps[_wtIndex];
-            document.getElementById('walkthrough-step').textContent = step.text;
+            CanopyAI.setText('walkthrough-step', step.text);
             if (step.action) step.action();
-            if (_wtIndex === _wtSteps.length - 1) document.getElementById('wt-next').textContent = 'Finish \u2713';
-            else document.getElementById('wt-next').textContent = 'Next Step \u2192';
+            if (_wtIndex === _wtSteps.length - 1) CanopyAI.setText('wt-next', 'Finish \u2713');
+            else CanopyAI.setText('wt-next', 'Next Step \u2192');
         }
     </script>
+    <script src="canopy-ai.js"></script>
 </body>
 
 </html>
