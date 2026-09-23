@@ -791,6 +791,28 @@
             <div id="p-insight-basis" style="font-family:var(--mono); font-size:10px; color:#666; margin-top:8px;">
             </div>
         </div>
+        <div class="insight-box" style="margin-top:15px; border:1px dashed #5a4a3a; background:rgba(0,0,0,0.3);">
+            <div class="insight-header" style="color:#d8c14a; font-size:10px;">DATA NEEDS & FUTURE INTEGRATIONS</div>
+            <div style="font-size:11px; color:#ccc; margin-top:8px; line-height:1.4;">
+                <strong style="color:#e9e2d4;">Required Data for Real-Time Accuracy:</strong>
+                Live API credentials for Google Earth Engine (Sentinel-2) and hardware soil moisture probes are required
+                to replace current OSINT approximation.
+
+                <br><br><strong style="color:#e9e2d4;">How to Add Google Earth Engine:</strong>
+                <ul style="padding-left:15px; margin:5px 0;">
+                    <li>Generate a Service Account key in Google Cloud Console.</li>
+                    <li>Add <code style="color:#eab308; background:#222; padding:0 3px;">GEE_PRIVATE_KEY</code> to your
+                        Vercel Environment Variables.</li>
+                    <li>Update the <code>/api/gee-proxy</code> endpoint to use true authentication.</li>
+                </ul>
+
+                <strong style="color:var(--leaf-300);">Export Data (CSV):</strong>
+                Use the <span
+                    style="border:1px solid #5a4a3a; padding:1px 4px; background:#2a2019; border-radius:3px; font-family:monospace;">Export
+                    all data (CSV)</span> button in the AI Analysis panel below to download and save your telemetry
+                offline!
+            </div>
+        </div>
 
         <div class="chart-container">
             <canvas id="trendChart"></canvas>
@@ -1513,7 +1535,13 @@
 
                         layer.setStyle({ fillColor: statusColor, color: statusColor, fillOpacity: 0.5 });
                         console.log("SETTING_INSIGHT_TEXT =", insight);
-                        // Canopy AI integration
+                        // Initialize Canopy AI panel before running
+                        CanopyAI.init({ panel: "#p-insight" });
+
+                        // Clear the "Fetching AI analysis..." text in the host panel
+                        const pInsight = document.getElementById('p-insight');
+                        if (pInsight) pInsight.innerHTML = '';
+
                         CanopyAI.run({
                             lat: centerLat,
                             lon: centerLng,
@@ -1526,9 +1554,6 @@
                             cropConfidence: (typeof inf !== 'undefined' && inf) ? inf.confidence : null,
                             areaHa: typeof areaHa !== 'undefined' ? areaHa : null
                         });
-
-                        // We also call init at start
-                        CanopyAI.init({ panel: "#p-insight" });
 
 
                         let confLabel = 'NOT CALIBRATED';
