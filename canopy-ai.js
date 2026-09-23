@@ -92,7 +92,7 @@
                 h("div", { class: "cai-status" }, r.status || "\u2014"),
                 h("div", { class: "cai-meta" }, `Confidence: ${r.confidence || "\u2014"} \u00b7 ${engine === "gemini" ? "Gemini (" + model + ")" : "Rule-based (Gemini unavailable)"}`))),
             h("p", {}, r.summary || ""),
-            list("RISKS", r.risks), list("RECOMMENDATIONS", r.recommendations), list("NEXT CHECKS", r.nextChecks),
+            ...list("RISKS", r.risks), ...list("RECOMMENDATIONS", r.recommendations), ...list("NEXT CHECKS", r.nextChecks),
             toolbar());
         wireToolbar(c);
         if (engine !== "gemini") note("Gemini could not be reached; this report is computed from thresholds, not by the AI model.", "cai-warn");
