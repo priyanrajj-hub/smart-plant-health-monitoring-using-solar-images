@@ -1470,14 +1470,7 @@
                             lead_time_str = "ESTIMATED LEAD TIME TO THRESHOLD: ~" + days + " days";
                         }
 
-                        // Safely apply MOONLIGHT texts to ALL instances (both main HUD and temporal panel if present)
-                        /* removed */ {
-                            const e = document.getElementById(id);
-                            if (e) {
-                                e.textContent = txt;
-                                if (color) e.style.color = color;
-                            }
-                        };
+
 
                         safetxt('p-ml-csi', "Not calibrated", '#8a7a63');
                         safetxt('p-ml-conf', "Not calibrated");
