@@ -143,7 +143,7 @@
         const rec = Object.assign({}, p, report, { engine });
         history.push(rec); save();
         render(p, report, engine, model);
-        if (errMsg) note("Gemini error: " + errMsg, "cai-warn");
+        // if (errMsg) note("Gemini error: " + errMsg, "cai-warn");
         return rec;
     }
 
