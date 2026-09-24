@@ -25,23 +25,29 @@ async function callModel(model, key, prompt) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 20000);
     try {
-        const r = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-            {
-                method: "POST",
-                signal: ctrl.signal,
-                headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-                body: JSON.stringify({
-                    systemInstruction: { parts: [{ text: SYSTEM }] },
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        temperature: 0.3,
-                        responseMimeType: "application/json",
-                        responseSchema: SCHEMA,
-                    },
-                }),
-            }
-        );
+        const headers = { "Content-Type": "application/json" };
+        let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+        if (key.startsWith("AQ.") || key.startsWith("ya29.")) {
+            headers["Authorization"] = `Bearer ${key}`;
+        } else {
+            headers["x-goog-api-key"] = key;
+        }
+
+        const r = await fetch(url, {
+            method: "POST",
+            signal: ctrl.signal,
+            headers,
+            body: JSON.stringify({
+                systemInstruction: { parts: [{ text: SYSTEM }] },
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: 0.3,
+                    responseMimeType: "application/json",
+                    responseSchema: SCHEMA,
+                },
+            }),
+        });
+
         const body = await r.json().catch(() => ({}));
         if (!r.ok) throw Object.assign(new Error(body?.error?.message || `HTTP ${r.status}`), { status: r.status });
         const text = body?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
@@ -76,7 +82,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ ok: true, model, report });
         } catch (e) {
             errors.push({ model, status: e.status || 0, message: String(e.message).slice(0, 300) });
-            if (e.status === 400 || e.status === 403) break; // bad key / bad request: other models will fail too
+            if (e.status === 401) break; // Stop only on definitive auth failures
         }
     }
     return res.status(502).json({ ok: false, error: "All Gemini models failed", details: errors });
