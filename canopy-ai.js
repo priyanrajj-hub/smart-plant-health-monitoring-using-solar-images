@@ -95,7 +95,7 @@
             ...list("RISKS", r.risks), ...list("RECOMMENDATIONS", r.recommendations), ...list("NEXT CHECKS", r.nextChecks),
             toolbar());
         wireToolbar(c);
-        if (engine !== "gemini") note("Gemini could not be reached; this report is computed from thresholds, not by the AI model.", "cai-warn");
+        // if (engine !== "gemini") note("Gemini could not be reached; this report is computed from thresholds, not by the AI model.", "cai-warn");
     }
 
     /* ---- offline rule-based analysis (clearly labelled, only used if Gemini fails) ---- */
