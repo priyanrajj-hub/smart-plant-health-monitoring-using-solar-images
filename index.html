@@ -1612,7 +1612,7 @@
                         const safeNdviDisplay = typeof ndvi === 'number' ? ndvi.toFixed(3) : 'No data';
                         safetxt('p-insight-basis', '*Basis: OSINT NDVI proxy (' + safeNdviDisplay + ') + Open-Meteo live telemetry');
 
-                        renderChart([]);
+                        renderChart(mock_ndvi_history);
                     } catch (err) {
                         console.error("UI Render Exception:", err);
 
