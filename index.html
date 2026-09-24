@@ -1334,6 +1334,11 @@
 
                         let cropTypeHTML = "Unknown Vegetation";
 
+                        // Mock phenology history for the inference model and chart since we lack historical satellite access in this proxy mode
+                        let mock_ndvi_history = [0.3, 0.4, 0.6, 0.7, 0.6, 0.5];
+                        if (ndvi > 0.6) mock_ndvi_history = [0.6, 0.65, 0.7, 0.72, 0.7, 0.68]; // Sugarcane / dense
+                        else if (ndvi < 0.2) mock_ndvi_history = [-0.1, 0.1, 0.2, 0.1, 0.1, 0.15]; // Flooded/bare
+
                         // Load saved override if exists
                         const parcelKey = `crop_${centerLat.toFixed(4)}_${centerLng.toFixed(4)}`;
                         const savedCrop = localStorage.getItem(parcelKey);
@@ -1348,11 +1353,6 @@
                                     if (el.tags) { allTags = { ...allTags, ...el.tags }; }
                                 });
                             }
-
-                            // Mock phenology history for the inference model since we lack historical satellite access in this proxy mode
-                            let mock_ndvi_history = [0.3, 0.4, 0.6, 0.7, 0.6, 0.5];
-                            if (ndvi > 0.6) mock_ndvi_history = [0.6, 0.65, 0.7, 0.72, 0.7, 0.68]; // Sugarcane / dense
-                            else if (ndvi < 0.2) mock_ndvi_history = [-0.1, 0.1, 0.2, 0.1, 0.1, 0.15]; // Flooded/bare
 
                             // Fetch from our new Python API
                             document.getElementById('p-crop-type').innerHTML = '<span class="loading-skeleton" style="width:70px;height:12px;display:inline-block;"></span>';
