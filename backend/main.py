@@ -91,5 +91,27 @@ def generate_advisory(req: AdvisoryRequest):
     }
     return get_advisory(sensor_data)
 
+class AssistantRequest(BaseModel):
+    message: str
+    lang: str = "en-IN"
+    context: dict = {}
+
+@app.post("/api/assistant/chat")
+def assistant_chat(req: AssistantRequest):
+    msg = req.message.lower()
+    
+    # 1. Fast-path intent matching
+    if "zoom in" in msg or "अंदर" in msg or "பெரிதாக்கு" in msg:
+        return {"text": "Zooming in on the map.", "actions": [{"type": "zoom_map", "level": 1}]}
+    if "high risk" in msg or "खतरा" in msg or "ஆபத்து" in msg:
+        return {"text": "Showing the highest risk fields in Sample Baseline Mode.", "actions": [{"type": "filter_by_risk", "level": "High"}]}
+    
+    # 2. Mock LLM Response
+    response_text = f"I am AGRI-JARVIS. (Sample Baseline Mode). You said: {req.message}. I am analyzing the telemetry..."
+    if "ndvi" in msg:
+        response_text = "nNDVI is a proxy index. In sample mode, we simulate it based on OSM tags and heuristics."
+    
+    return {"text": response_text, "actions": []}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
