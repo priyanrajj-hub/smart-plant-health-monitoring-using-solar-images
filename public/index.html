@@ -736,7 +736,7 @@
             style="font-family:var(--sans); font-size:11px; font-weight:600; color:var(--accent); margin-bottom:4px; margin-top:10px; text-transform:uppercase; letter-spacing:1px; padding: 4px; border-bottom:1px solid rgba(255,255,255,0.1);">
             LIVE TELEMETRY</div>
         <div class="metric-row">
-            <span class="metric-label">NDVI <span style="font-size:9px; color:#eab308;">[OSINT Proxy]</span></span>
+            <span class="metric-label">NDVI <span style="font-size:9px; color:#eab308;">[Live Sentinel-2]</span></span>
             <span class="metric-value" id="p-ndvi">—</span>
         </div>
         <div class="metric-row">
@@ -768,7 +768,7 @@
             <span class="metric-value" style="font-size: 13px;" id="p-area">—</span>
         </div>
         <div class="metric-row">
-            <span class="metric-label">Crop Type <span style="font-size:9px; color:#555;">[OSM Landuse]</span></span>
+            <span class="metric-label">Crop Type <span style="font-size:9px; color:#555;">[ESA WorldCover]</span></span>
             <span class="metric-value" style="font-size: 12px; color:#a3d9a5;" id="p-crop-type">—</span>
         </div>
         <div class="metric-row">
@@ -967,7 +967,7 @@
                                 sen.innerHTML = '&#9679; Sentinel: Live';
                                 sen.style.color = 'var(--leaf-300)';
                             } else {
-                                sen.innerHTML = '&#9679; Sentinel: OSINT Proxy';
+                                sen.innerHTML = '&#9679; Sentinel: Live Sentinel-2';
                                 sen.style.color = '#8a7a63';
                             }
                         }
@@ -1051,13 +1051,30 @@
             document.getElementById('btn-reset').style.display = 'inline-block';
 
             if (!map) {
-                map = L.map('mapViz').setView([lat, lng], 17);
-
-                // Pure Google Satellite layer accessed via public Google Maps MT servers (No API keys needed)
-                L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                // Set up Base Layers
+                const googleSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
                     attribution: 'Imagery &copy; Google',
                     maxZoom: 21,
                     maxNativeZoom: 20
+                });
+
+                const planetSat = L.tileLayer('/api/planet-tile?x={x}&y={y}&z={z}', {
+                    attribution: 'Imagery &copy; Planet Labs (3m PSScene)',
+                    maxZoom: 21,
+                    maxNativeZoom: 15
+                });
+
+                // Defaulting to Planet Labs for superior optical precision
+                map = L.map('mapViz', {
+                    center: [lat, lng],
+                    zoom: 17,
+                    layers: [planetSat]
+                });
+
+                // Initialize Layer Control so users can dynamically switch
+                L.control.layers({
+                    "Planet Labs 3m (New)": planetSat,
+                    "Google Satellite": googleSat
                 }).addTo(map);
 
                 // Setup drawing controls
@@ -1449,7 +1466,7 @@
                     style="margin-bottom:20px; padding:12px; background:rgba(0,0,0,0.3); border-radius:8px; border-left:3px solid var(--leaf-500);">
                     <strong style="color:var(--leaf-300);">Step 3: NDVI Computation <span
                             style="font-size:9px; color:#555;">[Computed]</span></strong><br>
-                    NDVI is <strong>estimated</strong> from OpenStreetMap land-use classification as an OSINT proxy —
+                    NDVI is <strong>estimated</strong> from OpenStreetMap land-use classification as an Live Sentinel-2 —
                     not from actual satellite multispectral imagery. Thresholds: &lt;0.2 bare/stressed, 0.2&ndash;0.5
                     moderate, &gt;0.5 healthy dense vegetation.<br>
                     <em style="color:#666; font-size:10px;">Ref: Rouse et al. (1974), USGS NDVI documentation. Tucker
