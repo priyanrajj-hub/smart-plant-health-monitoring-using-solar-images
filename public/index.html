@@ -1116,503 +1116,101 @@
                     if (_basis) _basis.textContent = '';
 
                     try {
-                        const centerLng = coords[0][0];
-                        const centerLat = coords[0][1];
-
-                        // Fire Open-Meteo natively
-                        const meteoPromise = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${centerLat}&longitude=${centerLng}&current=temperature_2m,relative_humidity_2m&daily=sunshine_duration,uv_index_max&timezone=auto`).then(r => r.json());
-
-                        // MULTI-SIGNAL FUSION: Fetch 14-day rainfall (current + last year baseline)
-                        const today = new Date().toISOString().split('T')[0];
-                        const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0];
-                        const rainPromise = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${centerLat}&longitude=${centerLng}&daily=precipitation_sum&start_date=${twoWeeksAgo}&end_date=${today}&timezone=auto`).then(r => r.json()).catch(() => null);
-
-                        // Fetch same 14-day window from previous year for location-specific baseline
-                        const lastYearEnd = new Date(Date.now() - 365 * 86400000).toISOString().split('T')[0];
-                        const lastYearStart = new Date(Date.now() - (365 + 14) * 86400000).toISOString().split('T')[0];
-                        const rainBaselinePromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${centerLat}&longitude=${centerLng}&daily=precipitation_sum&start_date=${lastYearStart}&end_date=${lastYearEnd}&timezone=auto`).then(r => r.json()).catch(() => null);
-
-                        // SERVERLESS REWRITE: Bypass Python and hit Overpass natively from UI
-                        let minLng = coords[0][0], maxLng = coords[0][0], minLat = coords[0][1], maxLat = coords[0][1];
-                        for (let p of coords) {
-                            if (p[0] < minLng) minLng = p[0];
-                            if (p[0] > maxLng) maxLng = p[0];
-                            if (p[1] < minLat) minLat = p[1];
-                            if (p[1] > maxLat) maxLat = p[1];
-                        }
-                        const osmRequestData = {
-                            lat: (minLat + maxLat) / 2,
-                            lng: (minLng + maxLng) / 2
-                        };
-
-                        const overpassPromise = fetch("/api/osm-lookup", {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(osmRequestData)
-                        }).then(r => r.json()).catch(e => null);
-
-                        const [meteoData, oData, rainData, rainBaseline] = await Promise.all([meteoPromise, overpassPromise, rainPromise, rainBaselinePromise]);
-                        const rawApiDiv = document.getElementById('raw-api-json');
-                        if (rawApiDiv) {
-                            const rawPayload = {
-                                "Metric: NDVI": {
-                                    "status": "PROXY / SIMULATED",
-                                    "source": oData ? "OSM Land-use Heuristics" : "Offline Fallback Simulation Engine",
-                                    "confidence": oData ? 0.65 : 0.40
-                                },
-                                "Metric: Weather (Live)": {
-                                    "status": meteoData ? "LIVE" : "UNAVAILABLE",
-                                    "source": "Open-Meteo API",
-                                    "acquisition": new Date().toISOString()
-                                },
-                                "Metric: Crop Inference": {
-                                    "status": "AI_ESTIMATE",
-                                    "model": "Canopy MobileNet Edge Placeholder"
-                                },
-                                "System_Telemetry_Status": {
-                                    "Sentinel_2_B04_B08": "UNAVAILABLE_PROXY_ACTIVE",
-                                    "Cloud_Cover_Contamination": "SIMULATED_20_PERCENT"
-                                }
-                            };
-                            rawApiDiv.textContent = JSON.stringify(rawPayload, null, 2);
-                        }
-
-                        let currentTemp = "No data";
-                        let deficit = "No data";
-
-                        // ALGORITHMIC NDVI CONSTRUCTION (OSINT Proxy)
-                        let ndvi = 0.45; // Default safe rural
-                        if (oData && oData.elements) {
-                            const activeTags = JSON.stringify(oData.elements).toLowerCase();
-                            if (activeTags.includes("water") || activeTags.includes("river")) ndvi = -0.3;
-                            else if (activeTags.includes("farmland") || activeTags.includes("orchard")) ndvi = 0.72;
-                            else if (activeTags.includes("grass")) ndvi = 0.38;
-                            else if (activeTags.includes("building") || activeTags.includes("residential")) ndvi = 0.12;
-                            else if (activeTags.includes("highway") || activeTags.includes("road") || activeTags.includes("asphalt")) ndvi = 0.05;
-                        }
-
-                        // Removed pseudoVariance and deterministic hashing. Remaining purely honest.
-                        if (ndvi !== "No data" && typeof ndvi === 'number') {
-                            ndvi = Math.max(-1.0, Math.min(1.0, ndvi));
-                        }
-
-                        // Warn user if polygon covers non-vegetation (built structures)
-                        if (ndvi < 0.15) {
-                            document.getElementById('p-error').innerHTML = '<span style="color:#eab308;">⚠ This area appears to contain limited vegetation cover (NDVI ' + ndvi.toFixed(3) + '). For best results, select a region with visible farmland or canopy.</span>';
-                        }
-
-                        // NOTE: Cloud cover detection requires satellite imagery API (Sentinel Hub / NASA Worldview).
-                        // Without API credentials, cloud cover cannot be detected. This is noted in the methodology panel.
-
-                        if (meteoData && meteoData.current) {
-                            currentTemp = meteoData.current.temperature_2m;
-                        }
-                        if (rainData && rainData.daily && rainData.daily.precipitation_sum) {
-                            const rains = rainData.daily.precipitation_sum;
-                            const totalRain = rains.reduce((a, b) => a + (b || 0), 0);
-                            const avgRain = totalRain / rains.length;
-                            let seasonalNorm = 3.5;
-                            if (rainBaseline && rainBaseline.daily && rainBaseline.daily.precipitation_sum) {
-                                const baseRains = rainBaseline.daily.precipitation_sum;
-                                seasonalNorm = baseRains.reduce((a, b) => a + (b || 0), 0) / baseRains.length;
-                            }
-                            deficit = seasonalNorm > 0.01 ? ((1 - (avgRain / seasonalNorm)) * 100).toFixed(0) : 0;
-                        }
-
-                        // ---- MOONLIGHT FUSION [PROBABILISTIC WEIGHTED] ----
-                        const c_t = meteoData.sensorData?.capacitive ?? null;
-                        const a_t = meteoData.sensorData?.acoustic ?? null;
-
-                        // INDEPENDENT POSTGRES TELEMETRY PIPELINE
-                        const logTelemetry = async () => {
-                            try {
-                                const polyData = {
-                                    polygon_geojson: polygonGeoJSON,
-                                    centroid_lat: lat,
-                                    centroid_lon: lng,
-                                    area_hectares: area_hectares,
-                                    ndvi: typeof ndvi === 'number' ? ndvi : null,
-                                    ndvi_source: "osint_proxy",
-                                    weather: meteoData && meteoData.current ? {
-                                        temperature_c: meteoData.current.temperature_2m,
-                                        humidity_pct: meteoData.current.relative_humidity_2m,
-                                        source: "open_meteo_live"
-                                    } : null
-                                };
-                                const statusSpan = document.getElementById('save-status');
-                                if (statusSpan) {
-                                    statusSpan.style.color = '#a1a1aa';
-                                    statusSpan.textContent = "Saving to Neon...";
-                                }
-
-                                const saveRes = await fetch('/api/log-visit', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(polyData)
-                                });
-                                const saveData = await saveRes.json();
-
-                                if (statusSpan) {
-                                    if (saveData.success) {
-                                        statusSpan.style.color = 'var(--leaf-500)';
-                                        statusSpan.textContent = `✓ Visit #${saveData.visit_count} Saved`;
-                                    } else {
-                                        statusSpan.style.color = '#ef4444';
-                                        statusSpan.textContent = `⚠ ${saveData.error || 'DB save failed'}`;
-                                    }
-                                }
-                            } catch (e) {
-                                const statusSpan = document.getElementById('save-status');
-                                if (statusSpan) {
-                                    statusSpan.style.color = '#ef4444';
-                                    statusSpan.textContent = `⚠ Neon DB Offline`;
-                                }
-                            }
-                        };
-                        logTelemetry(); // Run entirely in parallel to Gemini
-
-
-
-
-
-
-                        let statusPhase = "healthy";
-                        let statusColor = "#10b981";
-                        if (ndvi < 0.15) { statusPhase = "critical \u2718"; statusColor = "#8f2d2d"; }
-                        else if (ndvi < 0.4) { statusPhase = "stressed ⚠"; statusColor = "#b9542f"; }
-
-                        const rawDate = new Date();
-                        const sourceString = `${rawDate.toISOString().split('T')[0]} (OSM land-use + Open-Meteo)`;
-
-                        safetxt('p-region-name', 'Parcel Analysis Complete');
-                        safetxt('p-ndvi', typeof ndvi === 'number' ? ndvi.toFixed(3) : 'No data');
-                        safetxt('p-source', sourceString);
-
-                        // Render OSINT Weather Data & Compute Algorithmic Indices
-                        if (meteoData && meteoData.current) {
-                            const t = meteoData.current.temperature_2m;
-                            currentTemp = t;
-                            const h = meteoData.current.relative_humidity_2m;
-
-                            safetxt('p-temp', `${t}°C`);
-                            safetxt('p-humidity', `${h}%`);
-                            // Update hardware UI panel explicitly using conditional rendering for missing datastreams
-                            const cElem = document.getElementById('p-capacitance');
-                            if (cElem) cElem.textContent = c_t === null ? "Not Connected" : `${c_t} pF`;
-
-                            const aElem = document.getElementById('p-acoustic');
-                            if (aElem) aElem.textContent = a_t === null ? "Not Connected" : `${a_t} Hz`;
-
-                            if (meteoData.daily && meteoData.daily.sunshine_duration) {
-                                const sunHours = (meteoData.daily.sunshine_duration[0] / 3600).toFixed(1);
-                                safetxt('p-sun', `${sunHours} Hours`);
-                                safetxt('p-uv', meteoData.daily.uv_index_max[0]);
-                            }
-                        } else {
-                            safetxt('p-temp', 'Unavailable');
-                            safetxt('p-humidity', 'Unavailable');
-                            safetxt('p-sun', 'Unavailable');
-                            safetxt('p-uv', 'Unavailable');
-                        }
-
-                        // --- POLYGON SPATIAL METRICS & CROP CONTEXT ---
-                        let areaHa = 0;
-                        if (coords && coords.length > 2) {
-                            // Shoelace formula approximation for polygon area in hectares
-                            let areaStr = 0;
-                            const rad = Math.PI / 180;
-                            const R = 6378137;
-                            for (let i = 0; i < coords.length; i++) {
-                                let p1 = coords[i];
-                                let p2 = coords[(i + 1) % coords.length];
-                                areaStr += (p2[0] - p1[0]) * rad * (2 + Math.sin(p1[1] * rad) + Math.sin(p2[1] * rad)) / 2 * R * R * (p1[1] - p2[1]) * rad;
-                            }
-                            areaHa = (Math.abs(areaStr) / 2 / 10000).toFixed(2);
-                        }
-                        const elArea = document.getElementById('p-area');
-                        if (elArea) elArea.textContent = areaHa > 0 ? areaHa + " ha" : "Point Estimate";
-
-                        let cropTypeHTML = "Unknown Vegetation";
-
-                        // Mock phenology history for the inference model and chart since we lack historical satellite access in this proxy mode
-                        let mock_ndvi_history = [0.3, 0.4, 0.6, 0.7, 0.6, 0.5];
-                        if (ndvi > 0.6) mock_ndvi_history = [0.6, 0.65, 0.7, 0.72, 0.7, 0.68]; // Sugarcane / dense
-                        else if (ndvi < 0.2) mock_ndvi_history = [-0.1, 0.1, 0.2, 0.1, 0.1, 0.15]; // Flooded/bare
-
-                        // Load saved override if exists
-                        const parcelKey = `crop_${centerLat.toFixed(4)}_${centerLng.toFixed(4)}`;
-                        const savedCrop = localStorage.getItem(parcelKey);
-
-                        if (savedCrop) {
-                            cropTypeHTML = savedCrop + " (Saved Override)";
-                        } else {
-                            // Extract OSM tags flat
-                            let allTags = {};
-                            if (oData && oData.elements) {
-                                oData.elements.forEach(el => {
-                                    if (el.tags) { allTags = { ...allTags, ...el.tags }; }
-                                });
-                            }
-
-                            // Fetch from our new Python API
-                            document.getElementById('p-crop-type').innerHTML = '<span class="loading-skeleton" style="width:70px;height:12px;display:inline-block;"></span>';
-
-                            try {
-                                const infRes = await fetch('/api/crop_inference', {
-                                    method: 'POST',
-                                    body: JSON.stringify({
-                                        lat: centerLat, lng: centerLng,
-                                        tags: allTags, ndvi_history: mock_ndvi_history, area: areaHa
-                                    })
-                                });
-                                const inf = await infRes.json();
-
-                                if (inf.best_guess) {
-                                    let selectOptions = inf.shortlist ? inf.shortlist.map(c => `<option value="${c.crop}">${c.crop} - ${c.prob}%</option>`).join('') : '';
-
-                                    let lowConfidence = inf.confidence < 60;
-                                    let customInputDisplay = lowConfidence ? 'flex' : 'none';
-                                    let dropdownDisplay = lowConfidence ? 'none' : 'block';
-
-                                    cropTypeHTML = `
-                                        <div style="display:flex; flex-direction:column; gap:4px;">
-                                            <div><span id="inferred-crop-label" style="color:var(--leaf-300);">${inf.best_guess}</span> <span style="font-size:9px; color:#888;">(${inf.confidence}%)</span></div>
-                                            
-                                            <select id="crop-correction-dropdown" name="crop-correction-dropdown" onchange="if(this.value === '___OTHER___') { CanopyAI.setText('custom-crop-container').style.display = 'flex'; this.style.display = 'none'; } else { localStorage.setItem('${parcelKey}', this.value); document.getElementById('inferred-crop-label', this.value + ' (user-confirmed)'); this.style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: this.value, lat: ${centerLat}, lng: ${centerLng} }) }); }" 
-                                                style="background:transparent; color:#eab308; border:1px dashed #eab308; border-radius:3px; font-family:var(--mono); padding:2px; font-size:10px; cursor:pointer; max-width:180px; display:${dropdownDisplay};">
-                                                <option value="" disabled selected>Not sure? Correct it</option>
-                                                ${selectOptions}
-                                                <option value="___OTHER___">Other (Manual Entry)</option>
-                                            </select>
-                                            
-                                            <div id="custom-crop-container" style="display:${customInputDisplay}; flex-direction:row; gap:4px;">
-                                                <input type="text" id="custom-crop-input" name="custom-crop-input" placeholder="Enter crop or tree name" style="background:rgba(0,0,0,0.4); color:white; border:1px solid #aaa; border-radius:3px; padding:4px 6px; font-family:var(--sans); font-size:11px; outline:none; max-width:140px;" />
-                                                <button onclick="const v = CanopyAI.setText('custom-crop-input').value; if(v) { localStorage.setItem('${parcelKey}', v); document.getElementById('inferred-crop-label', v + ' (user-confirmed)'); document.getElementById('custom-crop-container').style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: v, manual: true, lat: ${centerLat}, lng: ${centerLng} }) }); }" style="background:var(--leaf-300); color:black; border:none; border-radius:3px; padding:4px 8px; font-size:11px; cursor:pointer;">Save</button>
-                                            </div>
-                                        </div>
-                                    `;
-                                } else {
-                                    cropTypeHTML = "Inference Error";
-                                }
-                            } catch (e) {
-                                console.error("Crop Inference API error:", e);
-                                cropTypeHTML = "Inference Failed";
-                            }
-                        }
-                        const elCrop = document.getElementById('p-crop-type');
-                        if (elCrop) elCrop.innerHTML = cropTypeHTML;
-
-                        // ---- MULTI-SIGNAL RAINFALL FUSION ----
-                        if (rainData && rainData.daily && rainData.daily.precipitation_sum) {
-                            const rains = rainData.daily.precipitation_sum;
-                            const totalRain = rains.reduce((a, b) => a + (b || 0), 0).toFixed(1);
-                            const avgRain = (totalRain / rains.length).toFixed(1);
-
-                            // Use REAL location-specific baseline from last year's same period
-                            let seasonalNorm = 3.5; // fallback if archive API fails
-                            let normSource = 'global fallback';
-                            if (rainBaseline && rainBaseline.daily && rainBaseline.daily.precipitation_sum) {
-                                const baseRains = rainBaseline.daily.precipitation_sum;
-                                seasonalNorm = baseRains.reduce((a, b) => a + (b || 0), 0) / baseRains.length;
-                                normSource = 'same period last year';
-                            }
-                            deficit = seasonalNorm > 0.01 ? ((1 - (avgRain / seasonalNorm)) * 100).toFixed(0) : 0;
-
-                            safetxt('p-rainfall', totalRain + ' mm');
-                            CanopyAI.setText('p-rain-deficit', (deficit > 0 ? deficit + '% below ' : Math.abs(deficit) + '% above ') + normSource);
-                            document.getElementById('rainfall-panel').style.display = 'block';
-
-                            // FUSION insight: cross-reference NDVI with rainfall
-                            const fusionEl = document.getElementById('ndvi-rain-fusion');
-                            if (ndvi < 0.4 && deficit > 20) {
-                                fusionEl.innerHTML = '⚠ <strong>Multi-signal alert:</strong> NDVI stress (' + ndvi.toFixed(3) + ') correlates with ' + deficit + '% rainfall deficit over 14 days — drought-induced stress likely.';
-                                fusionEl.style.display = 'block';
-                                fusionEl.style.color = '#ef4444';
-                            } else if (ndvi >= 0.5 && deficit < 10) {
-                                fusionEl.innerHTML = '\u2705 NDVI health (' + ndvi.toFixed(3) + ') consistent with adequate rainfall (' + totalRain + ' mm / 14d) — no anomaly detected.';
-                                fusionEl.style.display = 'block';
-                                fusionEl.style.color = '#10b981';
-                            } else {
-                                fusionEl.innerHTML = '\u2139 NDVI: ' + ndvi.toFixed(3) + ' | Rain: ' + totalRain + ' mm/14d | Avg: ' + avgRain + ' mm/d vs norm ' + seasonalNorm + ' mm/d';
-                                fusionEl.style.display = 'block';
-                                fusionEl.style.color = '#aaa';
-                            }
-                        }
-
-                        // UPDATE DATA HONESTY BADGE
-                        const badgeElem = document.getElementById("data-honesty-badge");
-                        if (badgeElem) {
-                            badgeElem.className = "badge osint-badge";
-                            badgeElem.textContent = "OSINT API";
-                            badgeElem.style.color = "var(--leaf-300)";
-                            badgeElem.style.borderColor = "var(--leaf-300)";
-                            badgeElem.style.background = "rgba(92, 138, 63, 0.1)";
-                        }
-
-
-                        // ---- SCIENTIFIC MOONLIGHT FUSION [VPD & BAYESIAN WEIGHTED] ----
-                        let csi_raw = 0;
-                        let conf_w = 0, conf_a = 0, conf_n = 0, conf_r = 0;
-                        let activeSignals = 0;
-
-                        // 1. Basal Metabolic Stress & VPD (Vapor Pressure Deficit) - FAO-56 Standard
-                        if (typeof currentTemp === 'number' && typeof meteoData?.current?.relative_humidity_2m === 'number') {
-                            const T = currentTemp;
-                            const RH = meteoData.current.relative_humidity_2m;
-                            // Saturation vapor pressure (e_s) in kPa
-                            const e_s = 0.6108 * Math.exp((17.27 * T) / (T + 237.3));
-                            // Actual vapor pressure (e_a) in kPa
-                            const e_a = e_s * (RH / 100);
-                            const vpd = e_s - e_a;
-
-                            // High VPD (> 2.0 kPa) causes stomatal closure stress
-                            const vpdStress = Math.max(0, Math.min(1, (vpd - 1.2) / 1.5));
-                            // Base basal stress to reflect real-world entropy
-                            const basalStress = 0.045 + (vpdStress * 0.12);
-
-                            csi_raw += basalStress;
-                            conf_w = 85;
-                            activeSignals += 1;
-                        }
-
-                        // 2. NDVI Canopy Structural Stress (40% Weight)
-                        if (typeof ndvi === 'number') {
-                            // Non-linear physiological penalty curve
-                            const ndviStress = Math.max(0, Math.pow((0.75 - Math.min(0.75, ndvi)) / 0.75, 2));
-                            csi_raw += ndviStress * 0.40;
-                            conf_n = ndvi > 0.15 ? 92 : 65;
-                            activeSignals += 1;
-                        }
-
-                        // 3. Hydrological Rain Deficit (35% Weight)
-                        if (typeof deficit !== 'undefined') {
-                            // Sigmoidal drought response curve
-                            const rainStress = 1 / (1 + Math.exp(-0.1 * (deficit - 25)));
-                            csi_raw += rainStress * 0.35;
-                            conf_r = 88;
-                            activeSignals += 1;
-                        }
-
-                        // 4. Thermal Acute Stress (20% Weight)
-                        if (typeof currentTemp === 'number') {
-                            let heatStress = 0;
-                            if (currentTemp > 32) heatStress = Math.min(1, Math.pow((currentTemp - 32) / 8, 2));
-                            else if (currentTemp < 10) heatStress = Math.min(1, (10 - currentTemp) / 10);
-                            csi_raw += heatStress * 0.20;
-                            conf_w = Math.max(conf_w, 80);
-                        }
-
-                        // Final Confidence Fusion
-                        let confidence = "Low";
-                        const totalConf = Math.round((conf_n + conf_r + conf_w + conf_a) / (activeSignals || 1));
-                        if (totalConf > 75) confidence = "High";
-                        else if (totalConf > 50) confidence = "Medium";
-
-                        // Normalize CSI
-                        const csi_final = Math.min(1.0, csi_raw).toFixed(3);
-                        const csi_num = parseFloat(csi_final);
-
-                        // Determine CSI Color
-                        let csiColor = '#10b981';
-                        if (csi_num > 0.6) csiColor = '#ef4444';
-                        else if (csi_num > 0.3) csiColor = '#eab308';
-
-                        // Lead time linear extrapolation (Est)
-                        const threshold = 0.7;
-                        let lead_time_str = "Stable (No rising stress trend detected)";
-                        if (csi_num > 0.2 && csi_num < 0.7) {
-                            const est_slope = 0.015; // daily rise proxy
-                            const days = Math.max(1, Math.round((threshold - csi_num) / est_slope));
-                            lead_time_str = "ESTIMATED LEAD TIME TO THRESHOLD: ~" + days + " days";
-                        } else if (csi_num >= 0.7) {
-                            lead_time_str = "CRITICAL THRESHOLD REACHED";
-                        }
-
-                        safetxt('p-ml-csi', csi_final, csiColor);
-                        safetxt('p-ml-conf', confidence);
-                        safetxt('ml-csi', csi_final);
-                        const mlCsiElem = document.getElementById('ml-csi');
-                        if (mlCsiElem) mlCsiElem.style.color = csiColor;
-                        safetxt('ml-confidence', confidence);
-                        safetxt('ml-wc', conf_w ? conf_w + '%' : 'N/A');
-                        safetxt('ml-wa', conf_a ? conf_a + '%' : 'N/A');
-                        safetxt('ml-wn', conf_n ? conf_n + '%' : 'N/A');
-                        safetxt('ml-wr', conf_r ? conf_r + '%' : 'N/A');
-                        safetxt('ml-lead-time', lead_time_str);
-
-                        const delta = csi_raw; // Keep variable for downstream logic
-                        const clampedBaseline = Math.max(-1, Math.min(1, ndvi - 0.05)); // Fallback baseline proxy
-
-                        safetxt('ndvi-baseline', clampedBaseline.toFixed(3));
-                        safetxt('ndvi-current', ndvi.toFixed(3));
-
-                        let deltaText = '';
-                        let arrowText = '';
-                        let arrowColor = '';
-                        if (delta > 0.02) {
-                            deltaText = '▲ +' + delta.toFixed(3) + ' improvement (greening trend)';
-                            arrowText = '↗'; arrowColor = '#10b981';
-                        } else if (delta < -0.02) {
-                            deltaText = '\u25bc ' + delta.toFixed(3) + ' degradation (browning trend)';
-                            arrowText = '\u2198'; arrowColor = '#ef4444';
-                        } else {
-                            deltaText = '● \u0394' + delta.toFixed(3) + ' — stable (within noise threshold \u00b10.02)';
-                            arrowText = '\u2192'; arrowColor = '#eab308';
-                        }
-                        safetxt('ndvi-arrow', arrowText, arrowColor);
-                        safetxt('ndvi-delta', deltaText);
-
-                        const tPanel = document.getElementById('temporal-panel');
-                        if (tPanel) tPanel.style.display = 'block';
-
-                        // ---- EARLY WARNING CASE STUDY ----
-                        if (ndvi < 0.4 && ndvi > 0.1) {
-                            // Deterministic estimate: days until NDVI would reach 0.20 browning threshold
-                            // assuming typical vegetation decline rate of ~0.015 NDVI/day under stress (est.)
-                            const distToThreshold = ndvi - 0.20;
-                            const estDeclineRate = 0.015; // NDVI units/day, typical stress decline
-                            const leadDays = Math.max(1, Math.round(distToThreshold / estDeclineRate));
-                            document.getElementById('case-study-text').innerHTML =
-                                '<span style="color:#eab308; font-size:9px;">[ESTIMATED — requires validation against real temporal imagery]</span><br>' +
-                                'At current proxy NDVI of <strong>' + ndvi.toFixed(3) + '</strong>, estimated <strong>~' + leadDays + ' days</strong> before reaching visible browning threshold (NDVI \u2264 0.20), assuming typical stress decline rate of 0.015/day.' +
-                                '<br><span style="font-size:10px; color:#666;">Ref: Tucker et al. (1979). Decline rate estimate requires site-specific calibration with real Sentinel-2 time series.</span>';
-                            document.getElementById('case-study-panel').style.display = 'block';
-                        } else {
-                            document.getElementById('case-study-panel').style.display = 'none';
-                        }
-
-                        badge.className = `health-badge ${statusPhase}`;
-                        safetxt('p-badge-text', statusPhase.toUpperCase());
-
-                        layer.setStyle({ fillColor: statusColor, color: statusColor, fillOpacity: 0.5 });
-                        // Initialize Canopy AI panel before running
-                        CanopyAI.init({ panel: "#p-insight" });
-
-                        // Clear the "Fetching AI analysis..." text in the host panel
-                        const pInsight = document.getElementById('p-insight');
-                        if (pInsight) pInsight.innerHTML = '';
-
-                        CanopyAI.run({
-                            lat: centerLat,
-                            lon: centerLng,
-                            ndvi: typeof ndvi === 'number' ? ndvi : null,
-                            temperature: typeof currentTemp !== 'undefined' ? currentTemp : null,
-                            sunlightHours: (typeof meteoData !== 'undefined' && meteoData && meteoData.daily && meteoData.daily.sunshine_duration) ? +(meteoData.daily.sunshine_duration[0] / 3600).toFixed(1) : null,
-                            uvIndex: (typeof meteoData !== 'undefined' && meteoData && meteoData.daily && meteoData.daily.uv_index_max) ? meteoData.daily.uv_index_max[0] : null,
-                            humidity: (typeof meteoData !== 'undefined' && meteoData && meteoData.current) ? meteoData.current.relative_humidity_2m : null,
-                            cropType: (typeof inf !== 'undefined' && inf && inf.best_guess) ? inf.best_guess : ((typeof savedCrop !== 'undefined' && savedCrop) ? savedCrop : 'Vegetation'),
-                            cropConfidence: (typeof inf !== 'undefined' && inf) ? inf.confidence : null,
-                            areaHa: typeof areaHa !== 'undefined' ? areaHa : null
+                        const geoPoly = { type: "Polygon", coordinates: [coords] };
+
+                        // 1. Initiate Streaming Connection to Planetary Computer Backend
+                        const res = await fetch("/api/analyze", {
+                            method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ polygon: geoPoly })
                         });
+                        if (!res.ok) throw new Error("API " + res.status);
 
+                        const reader = res.body.getReader();
+                        const decoder = new TextDecoder("utf-8");
+                        let buffer = "";
+                        let evidence = {};
+                        let finalScore = null;
 
+                        // UI setup
+                        safetxt('p-source', "Microsoft Planetary Computer");
 
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            buffer += decoder.decode(value, { stream: true });
+                            const lines = buffer.split("\n");
+                            buffer = lines.pop(); // keep remainder
 
-                        // Set basis label
-                        const safeNdviDisplay = typeof ndvi === 'number' ? ndvi.toFixed(3) : 'No data';
-                        safetxt('p-insight-basis', '*Basis: OSINT NDVI proxy (' + safeNdviDisplay + ') + Open-Meteo live telemetry');
+                            for (const line of lines) {
+                                if (!line.trim()) continue;
+                                try {
+                                    const chunk = JSON.parse(line);
+                                    if (chunk.type === "info") {
+                                        let hArea = (chunk.payload?.area_m2 || 0) / 10000;
+                                        safetxt('p-area', hArea > 0 ? hArea.toFixed(2) + " ha" : "Point Estimate");
+                                    } else if (chunk.type === "land_cover") {
+                                        evidence.landCover = chunk.payload;
+                                        let vegPct = Math.round((chunk.payload?.vegetated_fraction || 0) * 100);
+                                        safetxt('p-crop-type', `Vegetation Fraction: ${vegPct}%`);
+                                        if (vegPct < 30) {
+                                            document.getElementById('p-error').innerHTML = `<span style="color:#ef4444;">⚠ This target region is ${100 - vegPct}% non-vegetation. Metrics aborted.</span>`;
+                                        }
+                                    } else if (chunk.type === "ndvi") {
+                                        evidence.ndvi = chunk.payload;
+                                        if (chunk.payload.ndvi !== undefined) {
+                                            safetxt('p-ndvi', (chunk.payload.ndvi).toFixed(3));
+                                        } else {
+                                            safetxt('p-ndvi', 'Unavailable');
+                                        }
+                                    } else if (chunk.type === "weather") {
+                                        evidence.weather = chunk.payload;
+                                        safetxt('p-temp', chunk.payload.temperature ? chunk.payload.temperature + "°C" : "Unavailable");
+                                        safetxt('p-humidity', chunk.payload.soil_moisture ? chunk.payload.soil_moisture + " (Soil M)" : "Unavailable");
+                                    } else if (chunk.type === "modis") {
+                                        evidence.modis = chunk.payload;
+                                        safetxt('p-ml-csi', chunk.payload.z_score ? chunk.payload.z_score.toFixed(2) + " std" : "Available");
+                                        safetxt('p-ml-conf', "High");
+                                    } else if (chunk.type === "score") {
+                                        finalScore = chunk.payload;
+                                        badge.className = `health-badge ${finalScore.status.toLowerCase()}`;
+                                        safetxt('p-badge-text', finalScore.status.toUpperCase());
+                                        let statusColor = finalScore.status === "Healthy" ? "#10b981" : finalScore.status === "Stable" ? "#eab308" : finalScore.status === "Marginal" ? "#b9542f" : "#8f2d2d";
+                                        layer.setStyle({ fillColor: statusColor, color: statusColor, fillOpacity: 0.5 });
+                                        document.getElementById('p-insight').innerHTML = '<span style="color:#8a7a63;">Streaming complete. Generating Gemini Narrative...</span>';
+                                    } else if (chunk.type === "error") {
+                                        throw new Error(chunk.error);
+                                    }
+                                } catch (e) {
+                                    console.warn("Parse err", e);
+                                }
+                            }
+                        }
 
-                        renderChart(mock_ndvi_history);
+                        // 2. Fetch Sandbox LLM Narrative (Phase 7 execution)
+                        if (finalScore) {
+                            clearInterval(aiTimerInterval);
+                            const gemRes = await fetch("/api/gemini", {
+                                method: "POST", headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ polygon: geoPoly, evidence })
+                            });
+                            const gemData = await gemRes.json();
+                            if (gemData.ok && gemData.report) {
+                                const r = gemData.report;
+                                const cb = document.getElementById('confidence-badge');
+                                if (cb) { cb.style.display = 'inline-block'; cb.textContent = gemData.model; }
+
+                                safetxt('p-insight-basis', "*Rigidly bounded to Sentinel-2/ESA WorldCover data.");
+
+                                document.getElementById('p-insight').innerHTML = `
+                                    <div style="margin-bottom:10px;">${r.summary}</div>
+                                    ${r.risks && r.risks.length ? '<strong style="color:var(--stress-500);font-size:10px;">RISKS</strong><ul style="margin:2px 0 10px;padding-left:15px;font-size:12px;">' + r.risks.map(x => '<li>' + x + '</li>').join('') + '</ul>' : ''}
+                                    ${r.recommendations && r.recommendations.length ? '<strong style="color:var(--leaf-300);font-size:10px;">RECOMMENDATIONS</strong><ul style="margin:2px 0;padding-left:15px;font-size:12px;">' + r.recommendations.map(x => '<li>' + x + '</li>').join('') + '</ul>' : ''}
+                                `;
+                            }
+                        } else {
+                            throw new Error("Pipeline aborted (vegetation gate).");
+                        }
+
                     } catch (err) {
                         console.error("UI Render Exception:", err);
 
