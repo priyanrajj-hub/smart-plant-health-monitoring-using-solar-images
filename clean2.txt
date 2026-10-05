@@ -1,0 +1,25 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- C:\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\PRIYANRAJ J\.gemini\antigravity\scratch\smart-plant-health-monitoring-using-solar-images
+plugins: anyio-4.14.2
+collecting ... collected 5 items
+
+tests/test_pipeline.py::test_place_matching_iou FAILED                   [ 20%]
+tests/test_pipeline.py::test_visit_counting PASSED                       [ 40%]
+tests/test_pipeline.py::test_schema_structure PASSED                     [ 60%]
+tests/test_pipeline.py::test_provenance_guard PASSED                     [ 80%]
+tests/test_pipeline.py::test_spatial_leakage_groups PASSED               [100%]
+
+================================== FAILURES ===================================
+___________________________ test_place_matching_iou ___________________________
+tests\test_pipeline.py:35: in test_place_matching_iou
+    pid = match_place(new_poly, 5.0, 5.0, places)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts\place_matching.py:28: in match_place
+    for pid, place in existing_places.items():
+                      ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'list' object has no attribute 'items'
+=========================== short test summary info ===========================
+FAILED tests/test_pipeline.py::test_place_matching_iou - AttributeError: 'lis...
+========================= 1 failed, 4 passed in 1.63s =========================

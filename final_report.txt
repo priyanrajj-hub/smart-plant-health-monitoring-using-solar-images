@@ -1,0 +1,32 @@
+--- GREP RESULTS ---
+Math.random search:
+index.html:1676:                // Replaced Math.random simulation variance to maintain chart integrity
+
+AIza search:
+
+
+GEMINI key search:
+index.html:954:                                    alert("ADMIN WARNING: AI insights unavailable. Please configure GEMINI_API_KEY in Vercel Deployment Settings to enable live LLM integration.");
+index.html:1203:                        // SERVERLESS GEMINI FETCH (Secure Edge Endpoint)
+index.html:1224:                            console.log("GEMINI_TIMEOUT_MS =", 35000);
+
+--- PYTEST OUTPUT ---
+test_place_matching_iou: PASSED
+test_match_place_thresholds: PASSED
+test_visit_counting: PASSED
+test_schema_structure: PASSED
+ERROR: No valid non-simulated data to train on. Abstaining.
+test_provenance_guard: PASSED
+test_spatial_leakage_groups: PASSED
+
+--- ML TRAINERS ---
+Initiating Canopy Machine Learning Retraining Pipeline...
+STATUS: Checking for new telemetry configurations in data/...
+[1/2] Launching LightGBM Tabular Stress and NPK Estimators...
+ERROR: No valid non-simulated data to train on. Abstaining.
+      Error during Tabular training sequence.
+[2/2] Launching PyTorch EfficientNet Vision Classifier...
+      ERROR: Insufficient labeled data to train Vision Model (requires >= 200 samples). Abstaining.
+
+Training sweeps concluded successfully.
+Run `python scripts/evaluate.py --promote-if-better` to process model promotions.

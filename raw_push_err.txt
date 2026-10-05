@@ -1,0 +1,26 @@
+remote: error: GH013: Repository rule violations found for refs/heads/main.        
+remote: 
+remote: - GITHUB PUSH PROTECTION        
+remote:   —————————————————————————————————————————        
+remote:     Resolve the following violations before pushing again        
+remote: 
+remote:     - Push cannot contain secrets        
+remote: 
+remote:             
+remote:      (?) Learn how to resolve a blocked push        
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push        
+remote:             
+remote:             
+remote:       —— GCP API Key Bound to a Service Account ————————————        
+remote:        locations:        
+remote:          - commit: 2383f936330730d5601f7f3e77320a71b97bef9f        
+remote:            path: api/gemini/index.js:9        
+remote:             
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.        
+remote:        https://github.com/priyanrajj-hub/smart-plant-health-monitoring-using-solar-images/security/secret-scanning/unblock-secret/3JjcbDjlVmr0uyC7pHbEpa8EjAd        
+remote:             
+remote: 
+remote: 
+To https://github.com/priyanrajj-hub/smart-plant-health-monitoring-using-solar-images.git
+ ! [remote rejected]   main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/priyanrajj-hub/smart-plant-health-monitoring-using-solar-images.git'

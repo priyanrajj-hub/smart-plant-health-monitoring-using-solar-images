@@ -1,0 +1,40 @@
+16: function safetxt(id, txt, color) { const e = document.getElementById(id); if (e) { e.textContent = txt; if (color) e.style.color = color; } }
+47: document.getElementById('p-region-name').textContent = "Application Error";
+1070: document.getElementById('p-coords').textContent = `Center Approx: ${coords[0][1].toFixed(4)}, ${coords[0][0].toFixed(4)}`;
+1071: document.getElementById('p-region-name').textContent = "Analyzing Geometry...";
+1075: document.getElementById('p-badge-text').textContent = "Fetching Live Data...";
+1079: if (el) { el.classList.add('is-loading'); el.textContent = ''; }
+1090: document.getElementById('p-error').textContent = "";
+1094: if (_basis) _basis.textContent = '';
+1155: rawApiDiv.textContent = JSON.stringify(rawPayload, null, 2);
+1226: statusSpan.textContent = "Saving to Neon...";
+1239: statusSpan.textContent = `✓ Visit #${saveData.visit_count} Saved`;
+1242: statusSpan.textContent = `⚠ ${saveData.error || 'DB save failed'}`;
+1249: statusSpan.textContent = `⚠ Neon DB Offline`;
+1426: document.getElementById('p-error').textContent = '';
+1439: document.getElementById('p-region-name').textContent = "Parcel Analysis Complete";
+1440: document.getElementById('p-ndvi').textContent = typeof ndvi === 'number' ? ndvi.toFixed(3) : "No data";
+1441: document.getElementById('p-source').textContent = sourceString;
+1449: document.getElementById('p-temp').textContent = `${t}°C`;
+1450: document.getElementById('p-humidity').textContent = `${h}%`;
+1453: if (cElem) cElem.textContent = c_t === null ? "Not Connected" : `${c_t} pF`;
+1456: if (aElem) aElem.textContent = a_t === null ? "Not Connected" : `${a_t} Hz`;
+1460: document.getElementById('p-sun').textContent = `${sunHours} Hours`;
+1461: document.getElementById('p-uv').textContent = meteoData.daily.uv_index_max[0];
+1464: document.getElementById('p-temp').textContent = 'Unavailable';
+1465: document.getElementById('p-humidity').textContent = 'Unavailable';
+1466: document.getElementById('p-sun').textContent = 'Unavailable';
+1467: document.getElementById('p-uv').textContent = 'Unavailable';
+1485: if (elArea) elArea.textContent = areaHa > 0 ? areaHa + " ha" : "Point Estimate";
+1533: <select id="crop-correction-dropdown" name="crop-correction-dropdown" onchange="if(this.value === '___OTHER___') { document.getElementById('custom-crop-container').style.display = 'flex'; this.style.display = 'none'; } else { localStorage.setItem('${parcelKey}', this.value); document.getElementById('inferred-crop-label').textContent = this.value + ' (user-confirmed)'; this.style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: this.value, lat: ${centerLat}, lng: ${centerLng} }) }); }"
+1542: <button onclick="const v = document.getElementById('custom-crop-input').value; if(v) { localStorage.setItem('${parcelKey}', v); document.getElementById('inferred-crop-label').textContent = v + ' (user-confirmed)'; document.getElementById('custom-crop-container').style.display='none'; fetch('/api/crop_inference', { method: 'POST', body: JSON.stringify({ log_correction: true, crop: v, manual: true, lat: ${centerLat}, lng: ${centerLng} }) }); }" style="background:var(--leaf-300); color:black; border:none; border-radius:3px; padding:4px 8px; font-size:11px; cursor:pointer;">Save</button>
+1573: document.getElementById('p-rainfall').textContent = totalRain + ' mm';
+1574: document.getElementById('p-rain-deficit').textContent = (deficit > 0 ? deficit + '% below ' : Math.abs(deficit) + '% above ') + normSource;
+1598: badgeElem.textContent = "OSINT API";
+1620: e.textContent = txt;
+1677: document.getElementById('p-badge-text').textContent = statusPhase.toUpperCase();
+1700: if (nameEl && nameEl.textContent.includes("Analyzing")) {
+2011: document.getElementById('walkthrough-step').textContent = _wtSteps[0].text;
+2022: document.getElementById('walkthrough-step').textContent = step.text;
+2024: if (_wtIndex === _wtSteps.length - 1) document.getElementById('wt-next').textContent = 'Finish \u2713';
+2025: else document.getElementById('wt-next').textContent = 'Next Step \u2192';

@@ -98,52 +98,98 @@
         // if (engine !== "gemini") note("Gemini could not be reached; this report is computed from thresholds, not by the AI model.", "cai-warn");
     }
 
-    /* ---- offline rule-based analysis (clearly labelled, only used if Gemini fails) ---- */
-    function localAnalysis(p) {
-        const n = (v) => (v == null || v === "" || isNaN(+v) ? null : +v);
-        const ndvi = n(p.ndvi), t = n(p.temperature), hu = n(p.humidity), uv = n(p.uvIndex), sun = n(p.sunlightHours);
-        let score = 50, risks = [], recs = [], checks = [];
-        if (ndvi != null) { score = Math.round(Math.min(100, Math.max(0, ndvi * 115))); }
-        else { checks.push("NDVI is missing: run a satellite or drone pass before trusting this score."); }
-        if (ndvi != null && ndvi < 0.4) { risks.push("Low canopy greenness (NDVI < 0.40)."); recs.push("Inspect the parcel for water stress, nutrient deficiency or pests."); }
-        if (t != null && t > 35) { risks.push("Heat stress likely (>35\u00b0C)."); score -= 8; recs.push("Irrigate early morning or evening."); }
-        if (uv != null && uv >= 8) { risks.push("Very high UV index."); score -= 3; }
-        if (hu != null && hu > 80) { risks.push("High humidity raises fungal disease pressure."); score -= 4; checks.push("Scout leaves for fungal spots."); }
-        if (hu != null && hu < 35) { risks.push("Dry air raises evapotranspiration."); score -= 4; }
-        if (sun != null && sun < 5) { risks.push("Low sunlight hours limit photosynthesis."); score -= 4; }
-        if (!risks.length) risks.push("No threshold-based risks detected in the supplied data.");
-        if (!recs.length) recs.push("Maintain current irrigation and nutrient schedule.");
-        checks.push("Confirm with a ground-level check (leaf colour, soil moisture).");
-        score = Math.max(0, Math.min(100, score));
-        const status = score >= 75 ? "Healthy" : score >= 55 ? "Watch" : score >= 35 ? "Stressed" : "Critical";
-        return {
-            healthScore: score, status, confidence: ndvi == null ? "Low" : "Medium",
-            summary: `${p.cropType || "Vegetation"} parcel scores ${score}/100 (${status}). ${ndvi != null ? "NDVI is a proxy value, so treat this as a screening result." : "NDVI was not provided."}`,
-            risks, recommendations: recs, nextChecks: checks
-        };
-    }
-
     /* ---- main entry ---- */
     async function run(parcel) {
         const p = Object.assign({ timestamp: new Date().toISOString() }, parcel);
-        const c = card(); c.replaceChildren(h("h4", {}, "CANOPY AI INSIGHT"), h("div", { class: "cai-load" }, "Analysing parcel with Gemini\u2026"));
-        let report, engine = "gemini", model = "", errMsg = "";
+        const c = card(); c.replaceChildren(h("h4", {}, "CANOPY AI INSIGHT"), h("div", { class: "cai-load" }, "Fetching real satellite data\u2026"));
+        let report = {
+            healthScore: null, status: "Pending", confidence: "Pending",
+            summary: "Analyzing data streams...", risks: [], recommendations: [], nextChecks: []
+        };
+        let engine = "eo", model = "Planetary Computer", errMsg = "";
+
         try {
-            const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 30000);
-            const res = await fetch("/api/gemini", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p), signal: ctrl.signal });
-            clearTimeout(t);
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || !data.report) throw new Error(data.error ? data.error + (data.fix ? " \u2014 " + data.fix : "") : "HTTP " + res.status);
-            report = data.report; model = data.model;
+            const ctrl = new AbortController();
+            const res = await fetch("/api/analyze", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(p), signal: ctrl.signal
+            });
+
+            if (!res.ok) throw new Error("HTTP " + res.status);
+
+            // NDJSON Stream Reader
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+            let evidence = {};
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop(); // keep remainder
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                        const chunk = JSON.parse(line);
+                        // Progressive render logic based on chunk type
+                        if (chunk.type === "info") {
+                            report.summary = "Resolved polygon. Area: " + Math.round(chunk.payload?.area_m2 || 0) + " m²";
+                        } else if (chunk.type === "land_cover") {
+                            report.summary = `Confirmed Land Cover: ${Math.round((chunk.payload?.vegetated_fraction || 0) * 100)}% Vegetation`;
+                            evidence.landCover = chunk.payload;
+                        } else if (chunk.type === "ndvi") {
+                            report.summary = "Extracted true Sentinel-2 NDVI...";
+                            evidence.ndvi = chunk.payload;
+                        } else if (chunk.type === "weather" || chunk.type === "modis") {
+                            evidence[chunk.type] = chunk.payload;
+                        } else if (chunk.type === "score") {
+                            // Adopt the deterministic score
+                            Object.assign(report, chunk.payload);
+                            report.summary = "Formulating AI narrative...";
+                        } else if (chunk.type === "error") {
+                            throw new Error(chunk.error + (chunk.message ? ": " + chunk.message : ""));
+                        }
+                        // Render progress
+                        render(p, report, engine, model);
+                    } catch (err) {
+                        console.warn("Stream parse error:", err);
+                    }
+                }
+            }
+
+            // After stream finishes, if we gathered evidence and didn't abort/fail, invoke Gemini
+            if (report.healthScore !== null) {
+                const gemRes = await fetch("/api/gemini", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ...p, evidence })
+                });
+                const gemData = await gemRes.json();
+                if (gemData.ok && gemData.report) {
+                    // Update ONLY the narrative fields
+                    report.summary = gemData.report.summary || report.summary;
+                    report.risks = gemData.report.risks || report.risks;
+                    report.recommendations = gemData.report.recommendations || report.recommendations;
+                    report.nextChecks = gemData.report.nextChecks || report.nextChecks;
+                    model = gemData.model;
+                    engine = "gemini + eo";
+                }
+            }
         } catch (e) {
-            console.error("[CANOPY AI]", e); errMsg = e.message;
-            if (!cfg.allowLocalFallback) { c.replaceChildren(h("h4", {}, "CANOPY AI INSIGHT"), h("p", { class: "cai-err" }, "AI analysis failed: " + errMsg), toolbar()); wireToolbar(c); return null; }
-            report = localAnalysis(p); engine = "rules";
+            console.error("[CANOPY AI ERROR]", e); errMsg = e.message;
+            report = {
+                healthScore: null, status: "Data unavailable", confidence: "None",
+                summary: `Data unavailable (reason: ${errMsg})`,
+                risks: [], recommendations: [], nextChecks: []
+            };
+            engine = "failed";
         }
+
         const rec = Object.assign({}, p, report, { engine });
         history.push(rec); save();
-        render(p, report, engine, model);
-        // if (errMsg) note("Gemini error: " + errMsg, "cai-warn");
+        if (engine !== 'failed') render(p, report, engine, model);
         return rec;
     }
 

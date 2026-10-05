@@ -1,0 +1,25 @@
+1691:                         const safeNdviDisplay = typeof ndvi === 'number' ? ndvi.toFixed(3) : 'No data';
+1692:                         safetxt('p-insight-basis', '*Basis: OSINT NDVI proxy (' + safeNdviDisplay + ') + Open-Meteo live telemetry');
+1693: 
+1694:                         renderChart([]);
+1695:                     } catch (err) {
+1696:                         console.error("UI Render Exception:", err);
+1697: 
+1698:                         // Don't overwrite the entire status panel if partial data loaded successfully.
+1699:                         const nameEl = document.getElementById('p-region-name');
+1700:                         if (nameEl && nameEl.textContent.includes("Analyzing")) {
+1701:                             safetxt('p-region-name', "Analysis Incomplete");
+1702:                             badge.className = 'health-badge';
+1703:                             safetxt('p-badge-text', "Partial Data");
+1704:                         }
+1705:                         const errElem = document.getElementById('p-error');
+1706:                         if (errElem) safetxt('p-error', "Component Error: " + err.message);
+1707:                     }
+1708:                 });
+1709:             } else {
+1710:                 map.setView([lat, lng], 17);
+1711:             }
+1712:             setTimeout(() => map.invalidateSize(), 200);
+1713:         }
+1714: 
+1715:         function resetToGlobe() {

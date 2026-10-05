@@ -17,9 +17,12 @@ const SCHEMA = {
 };
 
 const SYSTEM = `You are an agronomy remote-sensing analyst for the Canopy vegetation-health dashboard.
-Use ONLY the numbers provided. NDVI is an RGB/OSINT proxy, not a lab measurement: say so when it drives the conclusion.
-If a value is null, say it is missing instead of guessing. Be specific to the crop and the weather values.
-summary: max 3 sentences. risks, recommendations, nextChecks: 2-4 short items each.`;
+CRITICAL RULES:
+1. NARRATIVE ONLY: You are strictly forbidden from inventing, estimating, or producing ANY numerical scores or metric values. 
+2. Use ONLY the textual evidence JSON provided. If a value is missing or null in the payload, explicitly state that it is unavailable.
+3. Never output a number that does not exactly appear in the JSON evidence.
+summary: max 3 sentences explaining the provided data.
+risks, recommendations, nextChecks: 2-4 short items each.`;
 
 async function callModel(model, key, prompt) {
     const ctrl = new AbortController();
@@ -86,26 +89,16 @@ export default async function handler(req, res) {
         }
     }
 
-    // Instead of failing and crashing the frontend demo, provide a hyper-realistic fallback 
-    // that matches the exact Gemini schema and leverages the incoming telemetry data.
+    // Phase 7: Strict template labeled "AI narrative unavailable" when fully failed
     const fallbackReport = {
-        healthScore: p.ndvi ? Math.round(Math.min(100, Math.max(0, p.ndvi * 100 + 10))) : 75,
-        status: p.ndvi < 0.2 ? "Critical" : (p.ndvi < 0.4 ? "Stressed" : (p.ndvi > 0.6 ? "Healthy" : "Watch")),
-        summary: `Vegetation parcel scores ${p.ndvi ? Math.round(p.ndvi * 100 + 10) : 75}/100 based on proxy telemetry. ${p.temperature ? 'Temperature is ' + p.temperature + '°C.' : ''} ${p.deficit && p.deficit < 0 ? 'Adequate rainfall supports structural vitality.' : 'Moisture regulation required.'} NDVI indicates ${p.ndvi > 0.6 ? 'robust structural vitality and chlorophyll density' : 'moderate canopy thinning'}.`,
-        confidence: p.ndvi && p.temperature ? "High" : "Medium",
-        risks: [
-            p.uvIndex > 7 ? 'High UV index accelerates evapotranspiration' : 'Fungal presence possible under high canopy density',
-            p.humidity < 40 ? 'Low relative humidity driving vapor pressure stress' : 'Soil saturation thresholds nearing limit'
-        ],
-        recommendations: [
-            p.ndvi < 0.5 ? 'Assess irrigation micro-zones for localized drought' : 'Maintain current nutrient and irrigation schedule',
-            'Conduct spot-checks of leaf perimeter for pest intrusion'
-        ],
-        nextChecks: [
-            'Confirm internal baseline with ground sensor capacitance probes',
-            'Verify next 72-hour precipitation forecast block'
-        ]
+        healthScore: null,
+        status: p.status || "Unknown",
+        summary: "AI narrative unavailable. Please rely on the hard metrics displayed on the dashboard.",
+        confidence: "Low",
+        risks: ["Automatic risk synthesis unavailable."],
+        recommendations: ["Consult an agronomist."],
+        nextChecks: []
     };
 
-    return res.status(200).json({ ok: true, model: "gemini-2.5-flash (heuristic)", report: fallbackReport });
+    return res.status(200).json({ ok: true, model: "AI narrative unavailable", report: fallbackReport });
 }
