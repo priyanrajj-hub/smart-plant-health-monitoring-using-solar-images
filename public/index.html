@@ -1051,11 +1051,21 @@
             document.getElementById('btn-reset').style.display = 'inline-block';
 
             if (!map) {
-                // Set up Base Layers
-                const googleSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-                    attribution: 'Imagery &copy; Google',
+                // High-resolution reliable Satellite Base Layers
+                const googleSat = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                    attribution: 'Imagery &copy; Google Satellite / Hybrid',
                     maxZoom: 21,
                     maxNativeZoom: 20
+                });
+
+                const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                    maxZoom: 19
+                });
+
+                const osmBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors',
+                    maxZoom: 19
                 });
 
                 const planetSat = L.tileLayer('/api/planet-tile?x={x}&y={y}&z={z}', {
@@ -1064,17 +1074,19 @@
                     maxNativeZoom: 15
                 });
 
-                // Defaulting to Planet Labs for superior optical precision
+                // Defaulting to Google Hybrid Satellite for guaranteed 100% visibility
                 map = L.map('mapViz', {
                     center: [lat, lng],
                     zoom: 17,
-                    layers: [planetSat]
+                    layers: [googleSat]
                 });
 
                 // Initialize Layer Control so users can dynamically switch
                 L.control.layers({
-                    "Planet Labs 3m (New)": planetSat,
-                    "Google Satellite": googleSat
+                    "Google Satellite (Active)": googleSat,
+                    "Esri High-Res Imagery": esriSat,
+                    "OpenStreetMap": osmBase,
+                    "Planet Labs 3m": planetSat
                 }).addTo(map);
 
                 // Setup drawing controls
