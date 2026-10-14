@@ -17,7 +17,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/priyanrajj-hub/smart-plant-health-monitoring-using-solar-images/issues"
   },
