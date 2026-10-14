@@ -1,14 +1,21 @@
 // Vercel serverless function: POST /api/gemini
 // Needs env var GEMINI_API_KEY (Vercel > Project > Settings > Environment Variables).
-const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+const MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3-flash-preview",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash-lite"
+];
 
 const SCHEMA = {
     type: "OBJECT",
     properties: {
         healthScore: { type: "INTEGER" },
-        status: { type: "STRING", enum: ["Healthy", "Watch", "Stressed", "Critical"] },
+        status: { type: "STRING" },
         summary: { type: "STRING" },
-        confidence: { type: "STRING", enum: ["Low", "Medium", "High"] },
+        confidence: { type: "STRING" },
         risks: { type: "ARRAY", items: { type: "STRING" } },
         recommendations: { type: "ARRAY", items: { type: "STRING" } },
         nextChecks: { type: "ARRAY", items: { type: "STRING" } },
@@ -18,9 +25,9 @@ const SCHEMA = {
 
 const SYSTEM = `You are an agronomy remote-sensing analyst for the Canopy vegetation-health dashboard.
 CRITICAL RULES:
-1. NARRATIVE ONLY: You are strictly forbidden from inventing, estimating, or producing ANY numerical scores or metric values. 
-2. Use ONLY the textual evidence JSON provided. If a value is missing or null in the payload, explicitly state that it is unavailable.
-3. Never output a number that does not exactly appear in the JSON evidence.
+1. NARRATIVE ONLY: Provide clear, actionable insights based on the parcel evidence and sensors provided.
+2. If evidence is present, interpret the NDVI, temperature, moisture, and vegetation score.
+3. If a specific language is requested, respond fully in that language (e.g. Tamil, Hindi, Telugu, Kannada, Malayalam, Marathi, Bengali, Gujarati, Punjabi, English, etc.).
 summary: max 3 sentences explaining the provided data.
 risks, recommendations, nextChecks: 2-4 short items each.`;
 
@@ -28,13 +35,8 @@ async function callModel(model, key, prompt) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 20000);
     try {
-        const headers = { "Content-Type": "application/json" };
-        let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-        if (key.startsWith("AQ.") || key.startsWith("ya29.")) {
-            headers["Authorization"] = `Bearer ${key}`;
-        } else {
-            headers["x-goog-api-key"] = key;
-        }
+        const headers = { "Content-Type": "application/json", "x-goog-api-key": key };
+        let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
 
         const r = await fetch(url, {
             method: "POST",

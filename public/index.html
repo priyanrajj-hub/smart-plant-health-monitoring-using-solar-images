@@ -1206,9 +1206,10 @@
                         // 2. Fetch Sandbox LLM Narrative (Phase 7 execution)
                         if (finalScore) {
                             clearInterval(aiTimerInterval);
+                            const currentLang = document.querySelector('.goog-te-combo')?.value || 'en';
                             const gemRes = await fetch("/api/gemini", {
                                 method: "POST", headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ polygon: geoPoly, evidence })
+                                body: JSON.stringify({ polygon: geoPoly, evidence, language: currentLang })
                             });
                             const gemData = await gemRes.json();
                             if (gemData.ok && gemData.report) {
