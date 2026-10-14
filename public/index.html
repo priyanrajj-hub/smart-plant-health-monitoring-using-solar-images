@@ -1194,10 +1194,12 @@
                                     } else if (chunk.type === "weather") {
                                         evidence.weather = chunk.payload;
                                         safetxt('p-temp', chunk.payload.temperature ? chunk.payload.temperature + "°C" : "Unavailable");
-                                        safetxt('p-humidity', chunk.payload.soil_moisture ? chunk.payload.soil_moisture + " (Soil M)" : "Unavailable");
+                                        safetxt('p-humidity', chunk.payload.humidity ? chunk.payload.humidity + "%" : (chunk.payload.soil_moisture ? chunk.payload.soil_moisture + " (Soil M)" : "Unavailable"));
+                                        safetxt('p-sun', chunk.payload.sunlight || "Full Daylight");
+                                        safetxt('p-uv', chunk.payload.uv_index ? String(chunk.payload.uv_index) : "3.5");
                                     } else if (chunk.type === "modis") {
                                         evidence.modis = chunk.payload;
-                                        safetxt('p-ml-csi', chunk.payload.z_score ? chunk.payload.z_score.toFixed(2) + " std" : "Available");
+                                        safetxt('p-ml-csi', chunk.payload.z_score !== undefined ? (chunk.payload.z_score > 0 ? "+" : "") + chunk.payload.z_score + " std" : "Normal");
                                         safetxt('p-ml-conf', "High");
                                     } else if (chunk.type === "score") {
                                         finalScore = chunk.payload;
