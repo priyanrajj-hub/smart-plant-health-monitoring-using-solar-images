@@ -283,15 +283,9 @@ export default async function handler(req, res) {
         writeChunk("modis", modis);
         writeChunk("weather", weather);
 
-        // Gate: Abort if < 30% vegetation, UNLESS live NDVI verifies it is actually green (e.g. overriding misclassified water bodies)
+        // Note if vegetation fraction is low but continue pipeline to deliver complete telemetry and Gemini narrative
         if (landCover.status === "ok" && landCover.data.vegetated_fraction < 0.3) {
-            if (ndvi.status === "ok" && ndvi.data.ndvi > 0.2) {
-                writeChunk("info", { message: "WorldCover indicates non-vegetation, but live NDVI reveals green canopy. Proceeding." });
-            } else {
-                writeChunk("info", { message: "Vegetated fraction extremely low and no green NDVI detected. Terminating agricultural metrics pipeline." });
-                res.end();
-                return;
-            }
+            writeChunk("info", { message: `LandCover shows ${Math.round(landCover.data.vegetated_fraction * 100)}% vegetation canopy. Computing metrics with caution.` });
         }
 
         // ─────────────────────────────────────────────

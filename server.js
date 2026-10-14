@@ -10,17 +10,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables (.env.local or process.env)
-if (!process.env.GEMINI_API_KEY) {
-    try {
-        const envFile = path.join(__dirname, ".env.local");
-        if (fs.existsSync(envFile)) {
-            const lines = fs.readFileSync(envFile, "utf8").split("\n");
-            for (const line of lines) {
-                const match = line.match(/^GEMINI_API_KEY=(.+)$/);
-                if (match) process.env.GEMINI_API_KEY = match[1].trim();
+try {
+    const envFile = path.join(__dirname, ".env.local");
+    if (fs.existsSync(envFile)) {
+        const lines = fs.readFileSync(envFile, "utf8").split(/\r?\n/);
+        for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (!line || line.startsWith("#")) continue;
+            const eqIdx = line.indexOf("=");
+            if (eqIdx > 0) {
+                const k = line.slice(0, eqIdx).trim();
+                const v = line.slice(eqIdx + 1).trim();
+                if (!process.env[k]) process.env[k] = v;
             }
         }
-    } catch (_) {}
+    }
+} catch (e) {
+    console.error("Error loading .env.local:", e);
 }
 
 const PORT = process.env.PORT || 3000;

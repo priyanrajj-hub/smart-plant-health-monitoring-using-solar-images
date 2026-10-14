@@ -1201,6 +1201,12 @@
                                         safetxt('p-ml-conf', "High");
                                     } else if (chunk.type === "score") {
                                         finalScore = chunk.payload;
+                                        safetxt('p-region-name', "Farmland Inspection");
+                                        safetxt('data-honesty-badge', "DATA SOURCE: SENTINEL-2 & MPC LIVE", "#9fd07a");
+                                        ['p-ndvi', 'p-temp', 'p-sun', 'p-uv', 'p-humidity', 'p-source'].forEach(id => {
+                                            let el = document.getElementById(id);
+                                            if (el) el.classList.remove('is-loading');
+                                        });
                                         badge.className = `health-badge ${finalScore.status.toLowerCase()}`;
                                         safetxt('p-badge-text', finalScore.status.toUpperCase());
                                         let statusColor = finalScore.status === "Healthy" ? "#10b981" : finalScore.status === "Stable" ? "#eab308" : finalScore.status === "Marginal" ? "#b9542f" : "#8f2d2d";
